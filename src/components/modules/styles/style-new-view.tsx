@@ -1,29 +1,180 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
-import { buyers, styles as initialStyles } from "@/lib/demo-data";
-import { StyleAttachment, Style } from "@/lib/types";
+import { buyers as initialBuyers, styles as initialStyles } from "@/lib/demo-data";
+import { StyleAttachment, Style, Buyer } from "@/lib/types";
+import { getStoredBuyers, WORKFLOW_EVENT } from "@/lib/workflow-service";
 import {
   Save, Plus, Trash2, Layers, UploadCloud, FileText, Image as ImageIcon,
   CheckCircle2, X, Eye, Paperclip, ArrowLeft
 } from "lucide-react";
+
+// Default categories and their sub-categories for garment production
+const DEFAULT_CATEGORY_MAP: Record<string, string[]> = {
+  "Shirts": [
+    "Formal",
+    "Casual",
+    "Denim",
+    "Linen",
+    "Partywear",
+    "Oversized / Drop Shoulder",
+    "Check / Flannel"
+  ],
+  "T-Shirts / Polos": [
+    "Round Neck",
+    "Polo Collar",
+    "V-Neck",
+    "Henley",
+    "Graphic Print",
+    "Activewear / Gym Tee"
+  ],
+  "Trousers / Pants": [
+    "Formal Trousers",
+    "Chinos",
+    "Denim Jeans",
+    "Cargo Pants",
+    "Joggers / Trackpants"
+  ],
+  "Kurtis / Ethnic": [
+    "Straight Kurti",
+    "Anarkali",
+    "Short Kurta",
+    "Ethnic Dress",
+    "Palazzo Suit"
+  ],
+  "Dresses / Skirts": [
+    "Casual Dress",
+    "Maxi Dress",
+    "Midi Dress",
+    "Bodycon",
+    "A-Line Skirt"
+  ],
+  "Outerwear / Jackets": [
+    "Denim Jacket",
+    "Bomber Jacket",
+    "Blazer",
+    "Hoodie / Sweatshirt",
+    "Windcheater"
+  ],
+  "Activewear": [
+    "Gym Tee",
+    "Trackpants",
+    "Sports Shorts",
+    "Tank Top"
+  ]
+};
 
 export function StyleNewView({ basePath }: { basePath?: string }) {
   const router = useRouter();
   const pathname = usePathname();
   const prefix = basePath || (pathname?.startsWith("/owner") ? "/owner" : pathname?.startsWith("/factory") ? "/factory" : "/owner");
 
+  // Buyers list from workflow service / local storage
+  const [buyerList, setBuyerList] = useState<Buyer[]>([]);
+
+  useEffect(() => {
+    const syncBuyers = () => {
+      try {
+        const stored = getStoredBuyers();
+        setBuyerList(stored && stored.length > 0 ? stored : initialBuyers);
+      } catch {
+        setBuyerList(initialBuyers);
+      }
+    };
+    syncBuyers();
+    window.addEventListener(WORKFLOW_EVENT, syncBuyers);
+    window.addEventListener("storage", syncBuyers);
+    return () => {
+      window.removeEventListener(WORKFLOW_EVENT, syncBuyers);
+      window.removeEventListener("storage", syncBuyers);
+    };
+  }, []);
+
   // Form Fields
   const [styleNumber, setStyleNumber] = useState("");
   const [styleName, setStyleName] = useState("");
   const [buyerId, setBuyerId] = useState("");
-  const [category, setCategory] = useState("Shirts");
+
+  // Categories & Subcategories State with Local Storage persistence
+  const [categoriesMap, setCategoriesMap] = useState<Record<string, string[]>>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const saved = localStorage.getItem("garmentflow_style_category_map");
+        if (saved) return JSON.parse(saved);
+      } catch (e) {}
+    }
+    return DEFAULT_CATEGORY_MAP;
+  });
+
+  const [category, setCategory] = useState("");
   const [subcategory, setSubcategory] = useState("");
-  const [gender, setGender] = useState<"men" | "women" | "kids" | "unisex">("men");
+
+  // Inline Category creation
+  const [isAddingCategory, setIsAddingCategory] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState("");
+
+  // Inline Subcategory creation
+  const [isAddingSubcategory, setIsAddingSubcategory] = useState(false);
+  const [newSubcategoryName, setNewSubcategoryName] = useState("");
+
+  const handleCategoryChange = (newCat: string) => {
+    if (newCat === "__NEW__") {
+      setIsAddingCategory(true);
+      setNewCategoryName("");
+      return;
+    }
+    setCategory(newCat);
+    const subList = categoriesMap[newCat] || [];
+    setSubcategory(subList.length > 0 ? subList[0] : "");
+  };
+
+  const handleAddNewCategory = () => {
+    const trimmed = newCategoryName.trim();
+    if (!trimmed) return;
+
+    const updated = {
+      ...categoriesMap,
+      [trimmed]: categoriesMap[trimmed] || []
+    };
+    setCategoriesMap(updated);
+    try {
+      localStorage.setItem("garmentflow_style_category_map", JSON.stringify(updated));
+    } catch (e) {}
+
+    setCategory(trimmed);
+    setSubcategory("");
+    setNewCategoryName("");
+    setIsAddingCategory(false);
+    // Automatically prompt for adding subcategory for this new category
+    setIsAddingSubcategory(true);
+  };
+
+  const handleAddNewSubcategory = () => {
+    const trimmed = newSubcategoryName.trim();
+    if (!trimmed) return;
+
+    const currentSubs = categoriesMap[category] || [];
+    if (!currentSubs.includes(trimmed)) {
+      const updated = {
+        ...categoriesMap,
+        [category]: [...currentSubs, trimmed]
+      };
+      setCategoriesMap(updated);
+      try {
+        localStorage.setItem("garmentflow_style_category_map", JSON.stringify(updated));
+      } catch (e) {}
+    }
+
+    setSubcategory(trimmed);
+    setNewSubcategoryName("");
+    setIsAddingSubcategory(false);
+  };
+
+  const [gender, setGender] = useState<"men" | "women" | "kids" | "unisex" | "">("");
   const [season, setSeason] = useState("");
-  const [year, setYear] = useState("2025");
+  const [year, setYear] = useState("");
   const [fabricType, setFabricType] = useState("");
   const [fabricComposition, setFabricComposition] = useState("");
   const [fabricColor, setFabricColor] = useState("");
@@ -36,9 +187,9 @@ export function StyleNewView({ basePath }: { basePath?: string }) {
   const [mainImage, setMainImage] = useState<string>("");
   const [previewFile, setPreviewFile] = useState<StyleAttachment | null>(null);
 
-  // BOM & Operations
-  const [boms, setBoms] = useState([{ type: "Fabric", name: "Oxford Cotton White", consumption: "1.35", unit: "meters", rate: "185" }]);
-  const [ops, setOps] = useState([{ name: "Collar Make & Attach", smv: "2.40", machine: "SNLS" }]);
+  // BOM & Operations — starts clean without prefilled mock data
+  const [boms, setBoms] = useState<Array<{ type: string; name: string; consumption: string; unit: string; rate: string }>>([]);
+  const [ops, setOps] = useState<Array<{ name: string; smv: string; machine: string }>>([]);
 
   const [toastMsg, setToastMsg] = useState("");
 
@@ -100,7 +251,7 @@ export function StyleNewView({ basePath }: { basePath?: string }) {
       return;
     }
 
-    const buyerObj = buyers.find((b) => b.id === buyerId);
+    const buyerObj = buyerList.find((b) => b.id === buyerId);
 
     const newStyle: Style = {
       id: `st-${Date.now()}`,
@@ -112,7 +263,7 @@ export function StyleNewView({ basePath }: { basePath?: string }) {
       season: season || "SS",
       year: year || "2025",
       category: category || "Shirts",
-      subcategory: subcategory || category,
+      subcategory: subcategory || (categoriesMap[category] ? categoriesMap[category][0] : category),
       gender: gender || "men",
       garmentType: subcategory || category,
       description: description || `${styleName} - ${fabricType}`,
@@ -170,39 +321,185 @@ export function StyleNewView({ basePath }: { basePath?: string }) {
             <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1.5">Style Number / Code *</label>
             <input type="text" required value={styleNumber} onChange={e => setStyleNumber(e.target.value)} placeholder="e.g. STL-2025-089" className="w-full h-10 px-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/40" />
           </div>
+
           <div>
             <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1.5">Style Name *</label>
             <input type="text" required value={styleName} onChange={e => setStyleName(e.target.value)} placeholder="e.g. Slim Fit Denim Jacket" className="w-full h-10 px-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/40" />
           </div>
+
           <div>
             <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1.5">Buyer *</label>
             <select required value={buyerId} onChange={e => setBuyerId(e.target.value)} className="w-full h-10 px-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/40">
               <option value="">Select Buyer</option>
-              {buyers.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+              {buyerList.map(b => <option key={b.id} value={b.id}>{b.name} ({b.code})</option>)}
             </select>
           </div>
+
+          {/* Category with inline Add New */}
           <div>
-            <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1.5">Category</label>
-            <select value={category} onChange={e => setCategory(e.target.value)} className="w-full h-10 px-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/40">
-              <option value="Shirts">Shirts</option>
-              <option value="Trousers / Denim">Trousers / Denim</option>
-              <option value="Dresses">Dresses</option>
-              <option value="Outerwear / Jackets">Outerwear / Jackets</option>
-              <option value="Activewear">Activewear</option>
-            </select>
+            <div className="flex items-center justify-between mb-1.5">
+              <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400">Category *</label>
+              {!isAddingCategory && (
+                <button
+                  type="button"
+                  onClick={() => { setIsAddingCategory(true); setNewCategoryName(""); }}
+                  className="text-[11px] font-semibold text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 hover:underline inline-flex items-center gap-0.5 cursor-pointer"
+                >
+                  <Plus size={12} className="stroke-[2.5]" />
+                  <span>Add Category</span>
+                </button>
+              )}
+            </div>
+
+            {isAddingCategory ? (
+              <div className="space-y-1.5">
+                <div className="flex gap-1.5">
+                  <input
+                    type="text"
+                    autoFocus
+                    value={newCategoryName}
+                    onChange={e => setNewCategoryName(e.target.value)}
+                    onKeyDown={e => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        handleAddNewCategory();
+                      } else if (e.key === "Escape") {
+                        setIsAddingCategory(false);
+                      }
+                    }}
+                    placeholder="e.g. Kurtis / Sweaters"
+                    className="flex-1 h-10 px-3 rounded-xl border border-indigo-300 dark:border-indigo-700 bg-white dark:bg-slate-800 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/40"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => handleAddNewCategory()}
+                    className="px-3 h-10 rounded-xl bg-indigo-600 text-white text-xs font-semibold hover:bg-indigo-700 transition-colors cursor-pointer"
+                  >
+                    Add
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setIsAddingCategory(false)}
+                    className="px-2.5 h-10 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-500 text-xs font-semibold hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                </div>
+                <p className="text-[11px] text-slate-400">Type category name & click Add</p>
+              </div>
+            ) : (
+              <select
+                value={category}
+                onChange={e => handleCategoryChange(e.target.value)}
+                className="w-full h-10 px-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/40 font-medium"
+              >
+                <option value="">-- Select Category --</option>
+                {Object.keys(categoriesMap).map(cat => (
+                  <option key={cat} value={cat}>
+                    {cat}
+                  </option>
+                ))}
+                <option value="__NEW__">+ Add New Category...</option>
+              </select>
+            )}
           </div>
+
+          {/* Subcategory with inline Add New */}
           <div>
-            <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1.5">Gender</label>
+            <div className="flex items-center justify-between mb-1.5">
+              <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400">
+                Sub-Category {category ? `(${category})` : ""}
+              </label>
+              {!isAddingSubcategory && category && (
+                <button
+                  type="button"
+                  onClick={() => { setIsAddingSubcategory(true); setNewSubcategoryName(""); }}
+                  className="text-[11px] font-semibold text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 hover:underline inline-flex items-center gap-0.5 cursor-pointer"
+                >
+                  <Plus size={12} className="stroke-[2.5]" />
+                  <span>Add Sub-Category</span>
+                </button>
+              )}
+            </div>
+
+            {isAddingSubcategory ? (
+              <div className="space-y-1.5">
+                <div className="flex gap-1.5">
+                  <input
+                    type="text"
+                    autoFocus
+                    value={newSubcategoryName}
+                    onChange={e => setNewSubcategoryName(e.target.value)}
+                    onKeyDown={e => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        handleAddNewSubcategory();
+                      } else if (e.key === "Escape") {
+                        setIsAddingSubcategory(false);
+                      }
+                    }}
+                    placeholder={`e.g. Type of ${category || "garment"} (Formal, Casual)`}
+                    className="flex-1 h-10 px-3 rounded-xl border border-indigo-300 dark:border-indigo-700 bg-white dark:bg-slate-800 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/40"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => handleAddNewSubcategory()}
+                    className="px-3 h-10 rounded-xl bg-indigo-600 text-white text-xs font-semibold hover:bg-indigo-700 transition-colors cursor-pointer"
+                  >
+                    Add
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setIsAddingSubcategory(false)}
+                    className="px-2.5 h-10 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-500 text-xs font-semibold hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                </div>
+                <p className="text-[11px] text-slate-400">Add sub-type for {category || "category"}</p>
+              </div>
+            ) : (
+              <select
+                value={subcategory}
+                onChange={e => {
+                  if (e.target.value === "__NEW__") {
+                    setIsAddingSubcategory(true);
+                    setNewSubcategoryName("");
+                  } else {
+                    setSubcategory(e.target.value);
+                  }
+                }}
+                className="w-full h-10 px-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/40 font-medium"
+              >
+                <option value="">-- Select Sub-Category --</option>
+                {(categoriesMap[category] || []).length === 0 ? (
+                  category ? <option value="" disabled>No sub-categories yet</option> : null
+                ) : (
+                  (categoriesMap[category] || []).map(sub => (
+                    <option key={sub} value={sub}>
+                      {sub}
+                    </option>
+                  ))
+                )}
+                {category && <option value="__NEW__">+ Add New Sub-Category...</option>}
+              </select>
+            )}
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1.5">Gender / Target Group</label>
             <select value={gender} onChange={e => setGender(e.target.value as any)} className="w-full h-10 px-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/40">
+              <option value="">Select Target Group</option>
               <option value="men">Men</option>
               <option value="women">Women</option>
               <option value="kids">Kids</option>
               <option value="unisex">Unisex</option>
             </select>
           </div>
-          <div>
+
+          <div className="md:col-span-3">
             <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1.5">Season & Year</label>
-            <div className="flex gap-2">
+            <div className="flex gap-2 max-w-sm">
               <input type="text" value={season} onChange={e => setSeason(e.target.value)} placeholder="SS / AW" className="flex-1 h-10 px-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/40" />
               <input type="text" value={year} onChange={e => setYear(e.target.value)} placeholder="2025" className="w-24 h-10 px-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/40" />
             </div>
@@ -323,17 +620,23 @@ export function StyleNewView({ basePath }: { basePath?: string }) {
             <button type="button" onClick={() => setBoms(p => [...p, { type: "Trims", name: "", consumption: "", unit: "pcs", rate: "" }])} className="text-xs font-semibold text-indigo-600 flex items-center gap-1"><Plus size={14} /> Add Material</button>
           </div>
           <div className="space-y-2">
-            {boms.map((b, i) => (
-              <div key={i} className="flex items-center gap-2 p-3 rounded-xl bg-slate-50 dark:bg-slate-800">
-                <select value={b.type} onChange={e => { const nb = [...boms]; nb[i].type = e.target.value; setBoms(nb); }} className="w-28 h-9 px-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs">
-                  <option>Fabric</option><option>Trims</option><option>Thread</option><option>Label</option><option>Packaging</option>
-                </select>
-                <input type="text" value={b.name} onChange={e => { const nb = [...boms]; nb[i].name = e.target.value; setBoms(nb); }} placeholder="Material name" className="flex-1 h-9 px-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs" />
-                <input type="text" value={b.consumption} onChange={e => { const nb = [...boms]; nb[i].consumption = e.target.value; setBoms(nb); }} placeholder="Cons/pc" className="w-20 h-9 px-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs text-center" />
-                <input type="text" value={b.unit} onChange={e => { const nb = [...boms]; nb[i].unit = e.target.value; setBoms(nb); }} placeholder="Unit" className="w-16 h-9 px-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs text-center" />
-                {boms.length > 1 && <button type="button" onClick={() => setBoms(p => p.filter((_, j) => j !== i))} className="text-red-500"><Trash2 size={14} /></button>}
-              </div>
-            ))}
+            {boms.length === 0 ? (
+              <p className="text-xs text-slate-400 py-3 text-center bg-slate-50 dark:bg-slate-800/40 rounded-xl">
+                No BOM materials added yet. Click &quot;+ Add Material&quot; to add.
+              </p>
+            ) : (
+              boms.map((b, i) => (
+                <div key={i} className="flex items-center gap-2 p-3 rounded-xl bg-slate-50 dark:bg-slate-800">
+                  <select value={b.type} onChange={e => { const nb = [...boms]; nb[i].type = e.target.value; setBoms(nb); }} className="w-28 h-9 px-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs">
+                    <option>Fabric</option><option>Trims</option><option>Thread</option><option>Label</option><option>Packaging</option>
+                  </select>
+                  <input type="text" value={b.name} onChange={e => { const nb = [...boms]; nb[i].name = e.target.value; setBoms(nb); }} placeholder="Material name" className="flex-1 h-9 px-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs" />
+                  <input type="text" value={b.consumption} onChange={e => { const nb = [...boms]; nb[i].consumption = e.target.value; setBoms(nb); }} placeholder="Cons/pc" className="w-20 h-9 px-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs text-center" />
+                  <input type="text" value={b.unit} onChange={e => { const nb = [...boms]; nb[i].unit = e.target.value; setBoms(nb); }} placeholder="Unit" className="w-16 h-9 px-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs text-center" />
+                  <button type="button" onClick={() => setBoms(p => p.filter((_, j) => j !== i))} className="text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 p-1.5 rounded-lg"><Trash2 size={14} /></button>
+                </div>
+              ))
+            )}
           </div>
         </div>
 
@@ -344,17 +647,23 @@ export function StyleNewView({ basePath }: { basePath?: string }) {
             <button type="button" onClick={() => setOps(p => [...p, { name: "", smv: "", machine: "SNLS" }])} className="text-xs font-semibold text-indigo-600 flex items-center gap-1"><Plus size={14} /> Add Operation</button>
           </div>
           <div className="space-y-2">
-            {ops.map((o, i) => (
-              <div key={i} className="flex items-center gap-2 p-3 rounded-xl bg-slate-50 dark:bg-slate-800">
-                <span className="text-xs font-bold text-slate-400 w-6">#{i + 1}</span>
-                <input type="text" value={o.name} onChange={e => { const no = [...ops]; no[i].name = e.target.value; setOps(no); }} placeholder="Operation name" className="flex-1 h-9 px-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs" />
-                <input type="text" value={o.smv} onChange={e => { const no = [...ops]; no[i].smv = e.target.value; setOps(no); }} placeholder="SMV (min)" className="w-24 h-9 px-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs text-center" />
-                <select value={o.machine} onChange={e => { const no = [...ops]; no[i].machine = e.target.value; setOps(no); }} className="w-28 h-9 px-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs">
-                  <option>SNLS</option><option>DNLS</option><option>Overlock 4F</option><option>Flatlock</option><option>Buttonhole</option><option>Bar Tack</option><option>Manual</option>
-                </select>
-                {ops.length > 1 && <button type="button" onClick={() => setOps(p => p.filter((_, j) => j !== i))} className="text-red-500"><Trash2 size={14} /></button>}
-              </div>
-            ))}
+            {ops.length === 0 ? (
+              <p className="text-xs text-slate-400 py-3 text-center bg-slate-50 dark:bg-slate-800/40 rounded-xl">
+                No operations added yet. Click &quot;+ Add Operation&quot; to add.
+              </p>
+            ) : (
+              ops.map((o, i) => (
+                <div key={i} className="flex items-center gap-2 p-3 rounded-xl bg-slate-50 dark:bg-slate-800">
+                  <span className="text-xs font-bold text-slate-400 w-6">#{i + 1}</span>
+                  <input type="text" value={o.name} onChange={e => { const no = [...ops]; no[i].name = e.target.value; setOps(no); }} placeholder="Operation name" className="flex-1 h-9 px-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs" />
+                  <input type="text" value={o.smv} onChange={e => { const no = [...ops]; no[i].smv = e.target.value; setOps(no); }} placeholder="SMV (min)" className="w-24 h-9 px-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs text-center" />
+                  <select value={o.machine} onChange={e => { const no = [...ops]; no[i].machine = e.target.value; setOps(no); }} className="w-28 h-9 px-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs">
+                    <option>SNLS</option><option>DNLS</option><option>Overlock 4F</option><option>Flatlock</option><option>Buttonhole</option><option>Bar Tack</option><option>Manual</option>
+                  </select>
+                  <button type="button" onClick={() => setOps(p => p.filter((_, j) => j !== i))} className="text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 p-1.5 rounded-lg"><Trash2 size={14} /></button>
+                </div>
+              ))
+            )}
           </div>
         </div>
 

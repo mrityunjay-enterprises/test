@@ -22,17 +22,24 @@ interface FinishingEntry {
 
 const STORAGE_KEY = "garmentflow_finishing";
 
-const stages = ["Thread Trimming", "Ironing / Pressing", "Tagging & Labeling", "Final QC", "Folding & Poly-bagging"];
+const stages = [
+  "Stage 1: Bartack, Eyelet & Button",
+  "Stage 2: Thread Cutting / Trimming",
+  "Stage 3: Press 1 (Steam Flattening)",
+  "Stage 4: Initial Check (QC Pass / Repair Loop)",
+  "Stage 5: Final Press (Crease & Showroom)",
+  "Stage 6: Final Checking (QA Pre-Packing)",
+];
 
 const initialData: FinishingEntry[] = [
-  { id: "fn1", order: "ORD-2025-0001", style: "Men's Oxford Shirt", stage: "Thread Trimming", completedQty: 4200, pendingQty: 800, operator: "Ramu Lal", remarks: "", status: "in-progress", updatedAt: "10:30 AM" },
-  { id: "fn2", order: "ORD-2025-0001", style: "Men's Oxford Shirt", stage: "Ironing / Pressing", completedQty: 3800, pendingQty: 1200, operator: "Bhanu Prakash", remarks: "Using steam press", status: "in-progress", updatedAt: "10:15 AM" },
-  { id: "fn3", order: "ORD-2025-0001", style: "Men's Oxford Shirt", stage: "Tagging & Labeling", completedQty: 3500, pendingQty: 1500, operator: "Sita Devi", remarks: "", status: "in-progress", updatedAt: "10:00 AM" },
-  { id: "fn4", order: "ORD-2025-0002", style: "Women's Maxi Dress", stage: "Thread Trimming", completedQty: 6000, pendingQty: 0, operator: "Ramu Lal", remarks: "", status: "completed", updatedAt: "09:45 AM" },
-  { id: "fn5", order: "ORD-2025-0002", style: "Women's Maxi Dress", stage: "Ironing / Pressing", completedQty: 5500, pendingQty: 500, operator: "Bhanu Prakash", remarks: "Low temp for georgette", status: "in-progress", updatedAt: "10:20 AM" },
-  { id: "fn6", order: "ORD-2025-0005", style: "Kids' Graphic Tee", stage: "Folding & Poly-bagging", completedQty: 7200, pendingQty: 800, operator: "Packing Team", remarks: "Individual poly bags", status: "in-progress", updatedAt: "10:40 AM" },
-  { id: "fn7", order: "ORD-2025-0001", style: "Men's Oxford Shirt", stage: "Final QC", completedQty: 3200, pendingQty: 1800, operator: "Kavita Sharma", remarks: "AQL 2.5 sampling", status: "in-progress", updatedAt: "09:50 AM" },
-  { id: "fn8", order: "ORD-2025-0005", style: "Kids' Graphic Tee", stage: "Tagging & Labeling", completedQty: 8000, pendingQty: 0, operator: "Sita Devi", remarks: "", status: "completed", updatedAt: "09:00 AM" },
+  { id: "fn1", order: "ORD-2025-0001", style: "Men's Oxford Shirt", stage: "Stage 1: Bartack, Eyelet & Button", completedQty: 5200, pendingQty: 800, operator: "Ramu Lal", remarks: "Buttons attached & reinforced", status: "in-progress", updatedAt: "10:30 AM" },
+  { id: "fn2", order: "ORD-2025-0001", style: "Men's Oxford Shirt", stage: "Stage 2: Thread Cutting / Trimming", completedQty: 5100, pendingQty: 900, operator: "Sita Devi", remarks: "Inside & outside loose threads cleaned", status: "in-progress", updatedAt: "10:15 AM" },
+  { id: "fn3", order: "ORD-2025-0001", style: "Men's Oxford Shirt", stage: "Stage 3: Press 1 (Steam Flattening)", completedQty: 4950, pendingQty: 1050, operator: "Bhanu Prakash", remarks: "First stage steam flattening", status: "in-progress", updatedAt: "10:00 AM" },
+  { id: "fn4", order: "ORD-2025-0001", style: "Men's Oxford Shirt", stage: "Stage 4: Initial Check (QC Pass / Repair Loop)", completedQty: 4800, pendingQty: 1200, operator: "Kavita Sharma", remarks: "140 altered, 135 repaired to Final Press, 5 damaged scrap", status: "in-progress", updatedAt: "09:45 AM" },
+  { id: "fn5", order: "ORD-2025-0001", style: "Men's Oxford Shirt", stage: "Stage 5: Final Press (Crease & Showroom)", completedQty: 4800, pendingQty: 1200, operator: "Bhanu Prakash", remarks: "Collar roll & cuff crease set", status: "in-progress", updatedAt: "10:20 AM" },
+  { id: "fn6", order: "ORD-2025-0001", style: "Men's Oxford Shirt", stage: "Stage 6: Final Checking (QA Pre-Packing)", completedQty: 4760, pendingQty: 1240, operator: "Kavita Sharma", remarks: "38 altered, 36 repaired, 2 damaged scrap. 4,760 moved to packing.", status: "in-progress", updatedAt: "10:40 AM" },
+  { id: "fn7", order: "ORD-2025-0002", style: "Women's Maxi Dress", stage: "Stage 1: Bartack, Eyelet & Button", completedQty: 4000, pendingQty: 0, operator: "Ramu Lal", remarks: "Yoke buttons complete", status: "completed", updatedAt: "09:50 AM" },
+  { id: "fn8", order: "ORD-2025-0002", style: "Women's Maxi Dress", stage: "Stage 2: Thread Cutting / Trimming", completedQty: 3800, pendingQty: 200, operator: "Sita Devi", remarks: "Georgette delicate trimming", status: "in-progress", updatedAt: "09:00 AM" },
 ];
 
 const operatorsList = ["Ramu Lal", "Bhanu Prakash", "Sita Devi", "Kavita Sharma", "Packing Team", "Hari Om", "Shyam Sunder"];
@@ -169,8 +176,18 @@ export function FinishingView({ basePath = "/factory" }: { basePath?: string }) 
       </div>
 
       {/* Stage Pipeline */}
-      <div className="bg-white dark:bg-slate-900 rounded-2xl p-5 border border-slate-200/60 dark:border-slate-800">
-        <h3 className="text-sm font-bold text-slate-800 dark:text-white mb-4">Finishing Pipeline</h3>
+      <div className="bg-white dark:bg-slate-900 rounded-2xl p-5 border border-slate-200/60 dark:border-slate-800 space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 dark:border-slate-800 pb-3">
+          <div>
+            <h3 className="text-sm font-bold text-slate-800 dark:text-white">Finishing Floor 6-Stage Pipeline</h3>
+            <p className="text-xs text-slate-500">
+              Strict Quality Gate: Initial Check (Stage 4) & Final QA Audit (Stage 6) with Repair/Damage Loops.
+            </p>
+          </div>
+          <div className="text-[11px] font-semibold text-indigo-600 bg-indigo-50 dark:bg-indigo-950/40 px-3 py-1 rounded-full border border-indigo-200 dark:border-indigo-800">
+            Unrepairable Alterations → Damaged Scrap Pool
+          </div>
+        </div>
         <div className="flex items-center gap-2 overflow-x-auto pb-2">
           {stageGroups.map((sg, i) => (
             <React.Fragment key={sg.stage}>

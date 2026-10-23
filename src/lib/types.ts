@@ -46,7 +46,7 @@ export interface Warehouse {
   name: string;
   code: string;
   address: string;
-  type: "raw-material" | "finished-goods" | "accessories" | "general";
+  type: "raw-material" | "finished-goods" | "accessories" | "general" | "central";
   status: "active" | "inactive";
 }
 
@@ -278,6 +278,19 @@ export interface BOMItem {
 }
 
 // Order Types
+export interface OrderStyleLine {
+  id: string;
+  styleId: string;
+  styleNumber: string;
+  styleName: string;
+  colorName?: string;
+  shadeCode?: string;
+  sizeBreakdown?: string;
+  quantity: number;
+  unitPrice: number;
+  totalValue: number;
+}
+
 export interface Order {
   id: string;
   orderNumber: string;
@@ -288,6 +301,7 @@ export interface Order {
   styleId: string;
   styleName: string;
   styleNumber: string;
+  styles?: OrderStyleLine[];
   orderDate: string;
   confirmationDate: string;
   deliveryDate: string;
@@ -312,20 +326,164 @@ export interface Order {
   estimatedCost: number;
   actualCost: number;
   profitMargin: number;
+  fptStatus?: "pending" | "pass" | "fail";
+  gptStatus?: "pending" | "pass" | "fail";
+  sizeSetRequired?: boolean;
+  sizeSetStatus?: "pending" | "approved" | "rejected" | "waived";
+  pieceRateLaborCost?: number;
+  hourlyLaborCost?: number;
+  gstRate?: number;
+  buyerGstNumber?: string;
+  placeOfSupply?: string;
+  hsnCode?: string;
+  destinationCity?: string;
+  transporterName?: string;
+  freightTerms?: string;
+  taxableAmount?: number;
+  gstAmount?: number;
   createdAt: string;
 }
 
 export type OrderStatus = 
-  | "draft" | "awaiting-approval" | "confirmed" | "material-planning" 
-  | "material-procurement" | "ready-for-production" | "in-cutting" 
-  | "in-stitching" | "in-special-process" | "in-finishing" 
-  | "in-quality" | "in-packing" | "ready-for-dispatch" 
-  | "dispatched" | "partially-dispatched" | "completed" | "on-hold" | "cancelled";
+  | "draft" | "awaiting-approval" | "confirmed" 
+  | "fabric-inward" | "fpt-testing" | "ppe-gpt" | "size-set-approval"
+  | "ready-for-cutting" | "in-cutting" | "cut-reported"
+  | "in-stitching" | "endline-checking" | "stitching-alteration"
+  | "in-special-process"
+  | "finishing-trims" | "finishing-thread-trimming" | "finishing-press-1" 
+  | "finishing-initial-check" | "finishing-repair" | "finishing-final-press" 
+  | "finishing-final-check" | "in-finishing" | "in-quality"
+  | "in-packing" | "ready-for-dispatch" 
+  | "dispatched" | "partially-dispatched" | "completed" | "on-hold" | "cancelled"
+  | "material-planning" | "material-procurement" | "ready-for-production";
 
 export interface OrderSizeBreakup {
   color: string;
   sizes: Record<string, number>;
   total: number;
+}
+
+// ─────────────────────────────────────────────────────────────
+// WORKFLOW QUALITY & MANUFACTURING RECORDS
+// ─────────────────────────────────────────────────────────────
+
+export interface FptRecord {
+  id: string;
+  orderId: string;
+  orderNumber: string;
+  lotNumber: string;
+  fabricType: string;
+  shrinkageLength: number;
+  shrinkageWidth: number;
+  colorFastnessWash: number; // 1-5 scale
+  colorFastnessRubbing: number;
+  gsmRequired: number;
+  gsmActual: number;
+  status: "pending" | "pass" | "fail";
+  testedBy: string;
+  testDate: string;
+  remarks?: string;
+}
+
+export interface GptRecord {
+  id: string;
+  orderId: string;
+  orderNumber: string;
+  washAppearance: "acceptable" | "defect" | "re-wash";
+  seamStrength: number; // in Newtons
+  spiralityTorque: number; // %
+  status: "pending" | "pass" | "fail";
+  testedBy: string;
+  testDate: string;
+  remarks?: string;
+}
+
+export interface SizeSetApproval {
+  id: string;
+  orderId: string;
+  orderNumber: string;
+  isRequired: boolean;
+  sampleCount: number;
+  buyerStatus: "pending" | "approved" | "rejected" | "waived";
+  approvedBy?: string;
+  approvedDate?: string;
+  comments?: string;
+}
+
+export interface CutOrderReport {
+  id: string;
+  orderId: string;
+  orderNumber: string;
+  styleNumber: string;
+  color: string;
+  markerLengthMtrs: number;
+  pliesCount: number;
+  plannedConsumptionMtrs: number;
+  actualConsumptionMtrs: number;
+  fabricSavingsPercent: number;
+  tableWastagePcs: number;
+  rejectionPcs: number;
+  totalCutPcs: number;
+  sizeBreakup: Record<string, number>;
+  bundlesGenerated: number;
+  cutDate: string;
+  masterName: string;
+}
+
+export interface StitchingEndlineLog {
+  id: string;
+  orderId: string;
+  orderNumber: string;
+  lineId: string;
+  checkedPcs: number;
+  passedPcs: number;
+  alteredPcs: number;
+  repairedPcs: number;
+  damagedScrapPcs: number;
+  defects: { type: string; count: number }[];
+  date: string;
+}
+
+export interface FinishingStagePipeline {
+  orderId: string;
+  orderNumber: string;
+  stage1TrimsDone: number;
+  stage2ThreadTrimmed: number;
+  stage3Press1Done: number;
+  stage4InitialCheck: {
+    inspected: number;
+    passed: number;
+    altered: number;
+    repaired: number;
+    damagedScrap: number;
+  };
+  stage5FinalPress: number;
+  stage6FinalCheck: {
+    inspected: number;
+    passed: number;
+    altered: number;
+    repaired: number;
+    damagedScrap: number;
+  };
+  readyForPacking: number;
+}
+
+export interface PieceWorkLog {
+  id: string;
+  workerId: string;
+  workerCode: string;
+  workerName: string;
+  orderId: string;
+  orderNumber: string;
+  operationName: string;
+  piecesCompleted: number;
+  piecesPassed: number;
+  piecesRejected: number;
+  ratePerPiece: number;
+  totalEarned: number;
+  date: string;
+  shift: string;
+  verifiedBy: string;
 }
 
 // Inventory Types
@@ -393,6 +551,39 @@ export interface InventoryTransaction {
   userId: string;
   userName: string;
   remarks: string;
+  createdAt: string;
+}
+
+export interface MaterialIssueItem {
+  id: string;
+  itemId: string;
+  itemCode: string;
+  itemName: string;
+  category: string;
+  unit: string;
+  requestedQty: number;
+  issuedQty: number;
+  rollNumbers?: string[];
+  lotNumber?: string;
+  remarks?: string;
+}
+
+export interface MaterialIssueSlip {
+  id: string;
+  slipNumber: string; // e.g. "MIS-2025-0104"
+  issueDate: string;
+  orderId?: string;
+  orderNumber?: string;
+  styleNumber?: string;
+  department: "Cutting" | "Sampling" | "Stitching" | "Finishing" | "Packing" | "General";
+  requestedBy: string;
+  issuedBy: string;
+  receiverName: string;
+  status: "draft" | "approved" | "issued" | "returned";
+  items: MaterialIssueItem[];
+  totalQty: number;
+  remarks?: string;
+  gatePassNumber?: string;
   createdAt: string;
 }
 
@@ -695,6 +886,38 @@ export interface PaymentReceipt {
   receivedBy: string;
 }
 
+// Financial Accounts Ledger Types
+export interface LedgerEntry {
+  id: string;
+  entryDate: string;
+  voucherNumber: string;
+  voucherType:
+    | "Sales Invoice"
+    | "Payment Receipt"
+    | "Purchase Bill"
+    | "Vendor Payment"
+    | "Job Work Bill"
+    | "Journal Voucher"
+    | "Payroll Entry"
+    | "Debit Note"
+    | "Credit Note";
+  accountCategory: "debtor" | "creditor" | "contractor" | "bank" | "expense" | "tax";
+  partyId?: string;
+  partyName: string;
+  contraAccount?: string;
+  particulars: string;
+  referenceNumber?: string;
+  debit: number;
+  credit: number;
+  runningBalance: number;
+  balanceType: "Dr" | "Cr";
+  currency: string;
+  reconciled: boolean;
+  status: "verified" | "cleared" | "pending" | "audited";
+  tags?: string[];
+  createdBy: string;
+}
+
 // HRMS Types
 export interface Employee {
   id: string;
@@ -717,6 +940,9 @@ export interface Employee {
   reportingManagerId?: string;
   reportingManager?: string;
   employmentType: "permanent" | "contract" | "trainee" | "apprentice" | "daily-wage" | "piece-rate" | "temporary" | "consultant";
+  wageType?: "piece-rate" | "hourly" | "daily-wage" | "monthly-salary";
+  hourlyRate?: number;
+  pieceRateDefault?: number;
   shift: string;
   grade: string;
   skillCategory: string;
@@ -810,6 +1036,22 @@ export interface PayrollEntry {
   totalDeductions: number;
   netPay: number;
   status: "draft" | "calculated" | "approved" | "locked" | "paid";
+  wageType?: "piece-rate" | "hourly" | "daily-wage" | "monthly-salary";
+  hourlyRate?: number;
+  pieceRateEarnings?: number;
+  pieceWorkDetails?: {
+    orderNumber: string;
+    operation: string;
+    pieces: number;
+    rate: number;
+    total: number;
+  }[];
+  bankName?: string;
+  bankAccount?: string;
+  ifscCode?: string;
+  utrNumber?: string;
+  disbursedAt?: string;
+  payoutMode?: "IMPS" | "NEFT" | "RTGS" | "Cheque" | "Cash";
 }
 
 // Job Work Types
@@ -876,6 +1118,12 @@ export interface Notification {
   read: boolean;
   priority: "low" | "medium" | "high" | "urgent";
   createdAt: string;
+  targetRole?: string | string[];
+  targetDept?: string;
+  actionUrl?: string;
+  actionLabel?: string;
+  readBy?: string[];
+  sender?: string;
 }
 
 // Audit Log Types

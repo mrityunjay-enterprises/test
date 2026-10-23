@@ -7,7 +7,7 @@ import { isOwnerRole } from "@/lib/permissions";
 import { dashboardData, orders as initialOrders, notifications as demoNotifications } from "@/lib/demo-data";
 import { getStoredOrders, WORKFLOW_EVENT } from "@/lib/workflow-service";
 import { Order } from "@/lib/types";
-import { GarmentWorkflowBanner } from "@/components/shared/garment-workflow-guide";
+
 import {
   AreaChart, Area, BarChart, Bar, LineChart, Line, PieChart, Pie, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
@@ -172,7 +172,7 @@ const defaultUser: UserProfile = {
   role: "Managing Director (MD)",
   dept: "Executive Management",
   email: "arun.kapoor@garmentflow.com",
-  badge: "Full Access",
+  badge: "Owner / Full Access",
   badgeColor: "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300",
   initials: "AK",
 };
@@ -180,7 +180,7 @@ const defaultUser: UserProfile = {
 function getDeptDashboardTitle(role: string): string {
   if (role.includes("Merchandis")) return "Merchandising & Order Lifecycle Dashboard";
   if (role.includes("Quality")) return "Quality Assurance & QC Inspection Dashboard";
-  if (role.includes("Store") || role.includes("Cutting")) return "Store, Inventory & Cutting Floor Dashboard";
+  if (role.includes("Store") || role.includes("Inventory")) return "Store & Raw Material Inventory Dashboard";
   if (role.includes("Finance") || role.includes("Accounts")) return "Commercial Billing & Finance Dashboard";
   if (role.includes("Floor") || role.includes("Supervisor")) return "Production Floor & Stitching Lines Dashboard";
   return "Executive Management Dashboard";
@@ -189,7 +189,7 @@ function getDeptDashboardTitle(role: string): string {
 function getDeptBadgeStyle(role: string): string {
   if (role.includes("Merchandis")) return "bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300 border border-indigo-200";
   if (role.includes("Quality")) return "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300 border border-emerald-200";
-  if (role.includes("Store") || role.includes("Cutting")) return "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300 border border-amber-200";
+  if (role.includes("Store") || role.includes("Inventory")) return "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300 border border-amber-200";
   if (role.includes("Finance") || role.includes("Accounts")) return "bg-cyan-100 text-cyan-700 dark:bg-cyan-900/40 dark:text-cyan-300 border border-cyan-200";
   if (role.includes("Floor") || role.includes("Supervisor")) return "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300 border border-blue-200";
   return "bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300 border border-purple-200";
@@ -198,7 +198,7 @@ function getDeptBadgeStyle(role: string): string {
 function getDefaultTab(role: string): string {
   if (role.includes("Merchandis")) return "merchandising";
   if (role.includes("Quality")) return "quality";
-  if (role.includes("Store") || role.includes("Cutting")) return "stores";
+  if (role.includes("Store") || role.includes("Inventory")) return "stores";
   if (role.includes("Finance") || role.includes("Accounts")) return "finance";
   if (role.includes("Floor") || role.includes("Supervisor")) return "production";
   return "overview";
@@ -219,10 +219,9 @@ function getDeptTabs(role: string): { id: string; label: string; icon: React.Rea
       { id: "overview", label: "Executive MIS", icon: <BarChart3 size={15} /> },
     ];
   }
-  if (role.includes("Store") || role.includes("Cutting")) {
+  if (role.includes("Store") || role.includes("Inventory")) {
     return [
-      { id: "stores", label: "Fabric & Cutting Floor", icon: <Scissors size={15} /> },
-      { id: "production", label: "Production Status", icon: <Factory size={15} /> },
+      { id: "stores", label: "Store & Fabric Inventory", icon: <Package size={15} /> },
       { id: "overview", label: "Executive MIS", icon: <BarChart3 size={15} /> },
     ];
   }
@@ -292,17 +291,8 @@ export interface DashboardViewProps {
 }
 
 export function DashboardView({ basePath = "/dashboard", initialTab }: DashboardViewProps) {
-  const [userProfile, setUserProfile] = useState<UserProfile>(() => {
-    if (typeof window !== "undefined") {
-      try {
-        const saved = localStorage.getItem("garmentflow_user");
-        if (saved) return JSON.parse(saved);
-      } catch { }
-    }
-    return defaultUser;
-  });
-
-  const [activeTab, setActiveTab] = useState<string>(() => initialTab || getDefaultTab(userProfile.role));
+  const [userProfile, setUserProfile] = useState<UserProfile>(defaultUser);
+  const [activeTab, setActiveTab] = useState<string>(() => initialTab || getDefaultTab(defaultUser.role));
   const [ordersList, setOrdersList] = useState<Order[]>([]);
 
   const resolveLink = (target: string) => {
@@ -345,6 +335,7 @@ export function DashboardView({ basePath = "/dashboard", initialTab }: Dashboard
         }
       } catch { }
     };
+    handleSync();
     window.addEventListener(WORKFLOW_EVENT, handleSync);
     window.addEventListener("storage", handleSync);
     window.addEventListener("garmentflow_user_changed", handleSync);
@@ -353,7 +344,7 @@ export function DashboardView({ basePath = "/dashboard", initialTab }: Dashboard
       window.removeEventListener("storage", handleSync);
       window.removeEventListener("garmentflow_user_changed", handleSync);
     };
-  }, []);
+  }, [initialTab]);
 
   const currentTabs = getDeptTabs(userProfile.role);
 
@@ -372,7 +363,7 @@ export function DashboardView({ basePath = "/dashboard", initialTab }: Dashboard
             {getDeptDashboardTitle(userProfile.role)}
           </h1>
           <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-            Welcome back, <strong className="text-slate-800 dark:text-slate-200 font-bold">{userProfile.name}</strong> • {userProfile.role} ({userProfile.dept}) • <span className="text-slate-400">{new Date().toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}</span>
+            Welcome back, <strong className="text-slate-800 dark:text-slate-200 font-bold">{userProfile.name}</strong> • {userProfile.role} ({userProfile.dept}) • <span className="text-slate-400" suppressHydrationWarning>{new Date().toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}</span>
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -396,8 +387,7 @@ export function DashboardView({ basePath = "/dashboard", initialTab }: Dashboard
         </div>
       </div>
 
-      {/* Garment Factory Process Guide Banner */}
-      <GarmentWorkflowBanner />
+
 
       {/* OVERVIEW TAB CONTENT */}
       {activeTab === "overview" && (

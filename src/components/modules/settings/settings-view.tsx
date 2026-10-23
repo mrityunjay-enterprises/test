@@ -31,9 +31,6 @@ export function SettingsView({ basePath = "/owner" }: { basePath?: string }) {
   const [showAddFactoryModal, setShowAddFactoryModal] = useState(false);
   const [newFactory, setNewFactory] = useState({ name: "", code: "", address: "", city: "", capacity: 5000 });
 
-  const [showAddWarehouseModal, setShowAddWarehouseModal] = useState(false);
-  const [newWarehouse, setNewWarehouse] = useState({ name: "", code: "", address: "", type: "raw-material" as const });
-
   const [showAddDeptModal, setShowAddDeptModal] = useState(false);
   const [newDept, setNewDept] = useState({ name: "", code: "", type: "production" as const });
 
@@ -156,23 +153,6 @@ export function SettingsView({ basePath = "/owner" }: { basePath?: string }) {
     triggerToast(`Factory Unit "${created.name}" added successfully!`);
   };
 
-  const handleAddWarehouse = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newWarehouse.name || !newWarehouse.code) return;
-    const created: WarehouseType = {
-      id: `w-${Date.now()}`,
-      factoryId: "f1",
-      name: newWarehouse.name,
-      code: newWarehouse.code,
-      address: newWarehouse.address || "Unit Warehouse Location",
-      type: newWarehouse.type,
-      status: "active"
-    };
-    setWarehouseList([...warehouseList, created]);
-    setNewWarehouse({ name: "", code: "", address: "", type: "raw-material" });
-    setShowAddWarehouseModal(false);
-    triggerToast(`Warehouse "${created.name}" created successfully!`);
-  };
 
   const handleAddDept = (e: React.FormEvent) => {
     e.preventDefault();
@@ -222,7 +202,7 @@ export function SettingsView({ basePath = "/owner" }: { basePath?: string }) {
             { id: "dataseed", label: "Data Seeding & Clean Slate", icon: <Database size={18} /> },
             { id: "company", label: "Company Profile", icon: <Building2 size={18} /> },
             { id: "factories", label: "Factories & Plants", icon: <FactoryIcon size={18} /> },
-            { id: "warehouses", label: "Warehouses & Stores", icon: <WarehouseIcon size={18} /> },
+            { id: "warehouses", label: "Company Store", icon: <WarehouseIcon size={18} /> },
             { id: "departments", label: "Departments & Divisions", icon: <Layers size={18} /> },
             { id: "users", label: "Users & Role Permissions", icon: <Users size={18} /> },
             { id: "numbering", label: "Numbering Sequences", icon: <Hash size={18} /> },
@@ -480,20 +460,27 @@ export function SettingsView({ basePath = "/owner" }: { basePath?: string }) {
             </div>
           )}
 
-          {/* TAB 4: WAREHOUSES & STORES */}
+          {/* TAB 4: COMPANY STORE */}
           {activeTab === "warehouses" && (
             <div className="space-y-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <h3 className="text-lg font-bold text-slate-900 dark:text-white">Warehouses & Material Stores</h3>
-                  <p className="text-xs text-slate-500 mt-0.5">Raw material fabric stores, accessory vaults & finished goods dispatch locations</p>
+                  <h3 className="text-lg font-bold text-slate-900 dark:text-white">Company Store Master</h3>
+                  <p className="text-xs text-slate-500 mt-0.5">Central store for fabric rolls, trims, accessories and finished goods</p>
                 </div>
-                <button
-                  onClick={() => setShowAddWarehouseModal(true)}
-                  className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-indigo-600 text-white text-xs font-bold hover:bg-indigo-700 transition-colors shadow-sm shadow-indigo-500/20"
-                >
-                  <Plus size={15} /> Add Store Vault
-                </button>
+                <span className="px-3 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+                  Single Central Store Configured
+                </span>
+              </div>
+
+              <div className="p-4 rounded-2xl bg-indigo-50/60 dark:bg-indigo-950/30 border border-indigo-100 dark:border-indigo-900/40 flex items-start gap-3">
+                <ShieldCheck size={20} className="text-indigo-600 dark:text-indigo-400 mt-0.5 shrink-0" />
+                <div className="text-xs text-indigo-900 dark:text-indigo-200">
+                  <p className="font-bold">Unified Single Store Architecture</p>
+                  <p className="mt-0.5 text-indigo-700 dark:text-indigo-300">
+                    Mrityunjay Enterprises operates with one unified central store at the Palri, Bhilwara facility. All raw materials, accessories, and finished goods are consolidated in this store.
+                  </p>
+                </div>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -509,8 +496,8 @@ export function SettingsView({ basePath = "/owner" }: { basePath?: string }) {
                           <span className="text-xs font-mono font-bold text-emerald-600">{wh.code}</span>
                         </div>
                       </div>
-                      <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-indigo-50 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300 uppercase">
-                        {wh.type}
+                      <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300 uppercase">
+                        Active Store
                       </span>
                     </div>
                     <p className="text-xs text-slate-500 flex items-center gap-1.5 pt-2 border-t border-slate-200/60 dark:border-slate-700">
@@ -519,45 +506,6 @@ export function SettingsView({ basePath = "/owner" }: { basePath?: string }) {
                   </div>
                 ))}
               </div>
-
-              {/* Modal Add Warehouse */}
-              {showAddWarehouseModal && (
-                <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
-                  <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 max-w-md w-full p-6 space-y-4 shadow-2xl">
-                    <div className="flex items-center justify-between border-b pb-3 border-slate-100 dark:border-slate-800">
-                      <h3 className="text-base font-bold text-slate-900 dark:text-white">Add New Warehouse / Store</h3>
-                      <button onClick={() => setShowAddWarehouseModal(false)} className="text-slate-400 hover:text-slate-600"><X size={18} /></button>
-                    </div>
-                    <form onSubmit={handleAddWarehouse} className="space-y-3 text-xs">
-                      <div>
-                        <label className="block font-bold mb-1 text-slate-700 dark:text-slate-300">Warehouse Name *</label>
-                        <input type="text" required value={newWarehouse.name} onChange={e => setNewWarehouse({ ...newWarehouse, name: e.target.value })} placeholder="e.g. Trim & Button Vault - Main Plant" className="w-full h-9 px-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 font-medium" />
-                      </div>
-                      <div>
-                        <label className="block font-bold mb-1 text-slate-700 dark:text-slate-300">Store Code *</label>
-                        <input type="text" required value={newWarehouse.code} onChange={e => setNewWarehouse({ ...newWarehouse, code: e.target.value })} placeholder="e.g. TRM-V1" className="w-full h-9 px-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 font-mono font-bold" />
-                      </div>
-                      <div>
-                        <label className="block font-bold mb-1 text-slate-700 dark:text-slate-300">Store Type</label>
-                        <select value={newWarehouse.type} onChange={e => setNewWarehouse({ ...newWarehouse, type: e.target.value as any })} className="w-full h-9 px-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 font-semibold">
-                          <option value="raw-material">Raw Material (Fabric Rolls)</option>
-                          <option value="accessories">Accessories & Trims</option>
-                          <option value="finished-goods">Finished Goods Warehouse</option>
-                          <option value="general">General Spares / Consumables</option>
-                        </select>
-                      </div>
-                      <div>
-                        <label className="block font-bold mb-1 text-slate-700 dark:text-slate-300">Location / Bin Rack Area</label>
-                        <input type="text" value={newWarehouse.address} onChange={e => setNewWarehouse({ ...newWarehouse, address: e.target.value })} placeholder="Building B, Ground Floor..." className="w-full h-9 px-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800" />
-                      </div>
-                      <div className="flex justify-end gap-2 pt-2">
-                        <button type="button" onClick={() => setShowAddWarehouseModal(false)} className="px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-600 text-xs font-semibold">Cancel</button>
-                        <button type="submit" className="px-4 py-2 rounded-xl bg-indigo-600 text-white text-xs font-bold shadow-sm">Save Warehouse</button>
-                      </div>
-                    </form>
-                  </div>
-                </div>
-              )}
             </div>
           )}
 

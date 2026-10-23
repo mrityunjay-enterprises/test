@@ -171,12 +171,13 @@ export function DispatchView({ basePath = "/factory" }: { basePath?: string }) {
 
   // Filtering
   const filtered = dispatchList.filter(d => {
+    const q = searchQuery.toLowerCase();
     const matchesSearch =
-      d.dispatchNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      d.buyerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      d.transporter.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      d.destination.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (d.lrNumber && d.lrNumber.toLowerCase().includes(searchQuery.toLowerCase()));
+      (d.dispatchNumber || "").toLowerCase().includes(q) ||
+      (d.buyerName || "").toLowerCase().includes(q) ||
+      (d.transporter || "").toLowerCase().includes(q) ||
+      (d.destination || "").toLowerCase().includes(q) ||
+      ((d.lrNumber || "").toLowerCase().includes(q));
 
     if (statusFilter === "all") return matchesSearch;
     return matchesSearch && d.status === statusFilter;
@@ -315,11 +316,11 @@ export function DispatchView({ basePath = "/factory" }: { basePath?: string }) {
                     </td>
 
                     <td className="px-4 py-3.5 text-right font-bold text-slate-800 dark:text-slate-200">
-                      {d.cartons} CTN
+                      {d.cartons || 0} CTN
                     </td>
 
                     <td className="px-4 py-3.5 text-right font-extrabold text-slate-900 dark:text-white whitespace-nowrap">
-                      {d.quantity.toLocaleString()} PCS
+                      {(d.quantity || 0).toLocaleString()} PCS
                     </td>
 
                     <td className="px-4 py-3.5 text-slate-600 dark:text-slate-400 whitespace-nowrap font-medium">
@@ -683,8 +684,8 @@ export function DispatchView({ basePath = "/factory" }: { basePath?: string }) {
                 <tbody>
                   <tr className="font-semibold">
                     <td className="border-r border-slate-900 p-2">Apparel Finished Goods (Export Quality Garments)</td>
-                    <td className="border-r border-slate-900 p-2 text-right font-bold">{selectedDispatchForGatePass.cartons} CTN</td>
-                    <td className="border-r border-slate-900 p-2 text-right font-extrabold text-indigo-700">{selectedDispatchForGatePass.quantity.toLocaleString()} PCS</td>
+                    <td className="border-r border-slate-900 p-2 text-right font-bold">{selectedDispatchForGatePass.cartons || 0} CTN</td>
+                    <td className="border-r border-slate-900 p-2 text-right font-extrabold text-indigo-700">{(selectedDispatchForGatePass.quantity || 0).toLocaleString()} PCS</td>
                     <td className="border-r border-slate-900 p-2 text-right">{selectedDispatchForGatePass.grossWeight || 1800} KG</td>
                     <td className="p-2 text-right">{selectedDispatchForGatePass.netWeight || 1600} KG</td>
                   </tr>

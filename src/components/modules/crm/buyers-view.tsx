@@ -7,6 +7,8 @@ import { Buyer } from "@/lib/types";
 import Link from "next/link";
 import { Search, Plus, Download, MoreHorizontal, Star, Eye, Edit, Phone, Mail, Globe, Filter, ArrowUpDown, MapPin } from "lucide-react";
 
+import { getStoredBuyers, WORKFLOW_EVENT } from "@/lib/workflow-service";
+
 export function BuyersView({ basePath = "/owner" }: { basePath?: string }) {
   const [buyerList, setBuyerList] = useState<Buyer[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
@@ -14,16 +16,22 @@ export function BuyersView({ basePath = "/owner" }: { basePath?: string }) {
   const [viewMode, setViewMode] = useState<"table" | "grid">("grid");
 
   useEffect(() => {
-    try {
-      const saved = localStorage.getItem("garmentflow_buyers");
-      if (saved) {
-        setBuyerList(JSON.parse(saved));
-        return;
+    const loadBuyers = () => {
+      try {
+        const list = typeof getStoredBuyers === "function" ? getStoredBuyers() : initialBuyers;
+        setBuyerList(list || []);
+      } catch {
+        setBuyerList(initialBuyers || []);
       }
-    } catch {
-      // fallback
-    }
-    setBuyerList(initialBuyers);
+    };
+    loadBuyers();
+
+    window.addEventListener(WORKFLOW_EVENT, loadBuyers);
+    window.addEventListener("storage", loadBuyers);
+    return () => {
+      window.removeEventListener(WORKFLOW_EVENT, loadBuyers);
+      window.removeEventListener("storage", loadBuyers);
+    };
   }, []);
 
   const filtered = useMemo(() => {
@@ -38,6 +46,36 @@ export function BuyersView({ basePath = "/owner" }: { basePath?: string }) {
     return result;
   }, [buyerList, searchQuery, categoryFilter]);
 
+  const handleExportBuyers = () => {
+    const timestamp = new Date().toISOString().split("T")[0];
+    const headers = ["Buyer Code", "Company Name", "Brand", "Category", "Type", "Country", "City", "Contact Person", "Email", "Phone", "Currency", "Payment Terms", "Total Orders", "Total Value (INR)", "Status"];
+    const rows = filtered.map((b: Buyer) => [
+      b.code,
+      b.name,
+      b.companyName || "-",
+      b.category,
+      b.type,
+      b.country,
+      b.city,
+      b.contactPerson,
+      b.email,
+      b.phone,
+      b.currency,
+      b.paymentTerms,
+      b.totalOrders,
+      b.totalOrderValue || 0,
+      b.status
+    ]);
+    const csvContent = "data:text/csv;charset=utf-8," + [headers, ...rows].map(e => e.map((cell: any) => `"${String(cell ?? "").replace(/"/g, '""')}"`).join(",")).join("\n");
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `garmentflow_buyers_${timestamp}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   return (
     <div className="space-y-6 animate-fade-in">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -50,7 +88,7 @@ export function BuyersView({ basePath = "/owner" }: { basePath?: string }) {
             <button onClick={() => setViewMode("grid")} className={cn("px-3 py-1.5 rounded-md text-xs font-medium transition-all", viewMode === "grid" ? "bg-indigo-600 text-white" : "text-slate-500")}>Grid</button>
             <button onClick={() => setViewMode("table")} className={cn("px-3 py-1.5 rounded-md text-xs font-medium transition-all", viewMode === "table" ? "bg-indigo-600 text-white" : "text-slate-500")}>Table</button>
           </div>
-          <button className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm text-slate-600 dark:text-slate-300 hover:bg-slate-50 transition-colors">
+          <button onClick={handleExportBuyers} className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm text-slate-600 dark:text-slate-300 hover:bg-slate-50 transition-colors shadow-sm">
             <Download size={16} /> Export
           </button>
           <Link href={`${basePath}/customers/new`} className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700 transition-colors shadow-sm shadow-indigo-500/25">

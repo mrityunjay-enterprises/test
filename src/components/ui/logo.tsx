@@ -8,9 +8,16 @@ interface LogoProps {
   size?: "sm" | "md" | "lg";
   className?: string;
   variant?: "dark" | "light" | "auto";
+  showSubtitle?: boolean;
 }
 
-export function GarmentFlowLogo({ collapsed = false, size = "md", className, variant = "auto" }: LogoProps) {
+export function GarmentFlowLogo({
+  collapsed = false,
+  size = "md",
+  className,
+  variant = "auto",
+  showSubtitle = false,
+}: LogoProps) {
   const iconSizes = {
     sm: "w-8 h-8",
     md: "w-9 h-9",
@@ -64,12 +71,14 @@ export function GarmentFlowLogo({ collapsed = false, size = "md", className, var
               ERP
             </span>
           </div>
-          <span className={cn(
-            "text-[10px] font-medium tracking-wider uppercase mt-1",
-            isLight ? "text-indigo-200/80" : "text-slate-500 dark:text-slate-400"
-          )}>
-            Manufacturing Platform
-          </span>
+          {showSubtitle && (
+            <span className={cn(
+              "text-[10px] font-medium tracking-wider uppercase mt-1",
+              isLight ? "text-indigo-200/80" : "text-slate-500 dark:text-slate-400"
+            )}>
+              Manufacturing Platform
+            </span>
+          )}
         </div>
       )}
     </div>

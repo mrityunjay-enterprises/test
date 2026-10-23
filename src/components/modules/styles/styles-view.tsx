@@ -11,6 +11,7 @@ import {
   Trash2, UploadCloud, Eye, Paperclip, X, Image as ImageIcon, Download, CheckCircle2
 } from "lucide-react";
 
+
 export function StylesView({ basePath }: { basePath?: string }) {
   const pathname = usePathname();
   const prefix = basePath || (pathname?.startsWith("/owner") ? "/owner" : pathname?.startsWith("/factory") ? "/factory" : "/owner");
@@ -126,10 +127,15 @@ export function StylesView({ basePath }: { basePath?: string }) {
           <p className="text-sm text-slate-500 mt-1">Centralized garment styles, Tech Pack PDF uploads, sketches & measurement charts</p>
         </div>
         <div className="flex items-center gap-2">
-          <Link href={`${prefix}/styles/new`} className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700 transition-colors shadow-sm shadow-indigo-500/25">
+          <Link
+            href={`${prefix}/styles/new`}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700 transition-colors shadow-sm shadow-indigo-500/25"
+          >
             <Plus size={16} /> Create Style
           </Link>
         </div>
+
+
       </div>
 
       <div className="relative max-w-md">
@@ -349,3 +355,5 @@ export function StylesView({ basePath }: { basePath?: string }) {
     </div>
   );
 }
+
+

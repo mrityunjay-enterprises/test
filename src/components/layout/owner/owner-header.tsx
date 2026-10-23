@@ -12,12 +12,12 @@ import {
   AlertTriangle, DollarSign, Factory, ExternalLink, Sparkles, HelpCircle
 } from "lucide-react";
 import { GarmentWorkflowModal } from "@/components/shared/garment-workflow-guide";
+import { NotificationDropdown } from "@/components/shared/notification-dropdown";
 
 export function OwnerHeader() {
   const router = useRouter();
   const { collapsed, setMobileOpen } = useOwnerSidebar();
   const [darkMode, setDarkMode] = useState(false);
-  const [showNotifications, setShowNotifications] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [showGuideModal, setShowGuideModal] = useState(false);
@@ -31,6 +31,8 @@ export function OwnerHeader() {
   });
 
   React.useEffect(() => {
+    // Switch off night mode system for now: enforce light mode
+    document.documentElement.classList.remove("dark");
     try {
       const saved = localStorage.getItem("garmentflow_user");
       if (saved) {
@@ -40,11 +42,6 @@ export function OwnerHeader() {
       console.error(e);
     }
   }, []);
-
-  const toggleDarkMode = () => {
-    setDarkMode(!darkMode);
-    document.documentElement.classList.toggle("dark");
-  };
 
   const handleLogout = () => {
     localStorage.removeItem("garmentflow_user");
@@ -85,76 +82,13 @@ export function OwnerHeader() {
       </div>
 
       <div className="flex items-center gap-2 ml-auto">
-        {/* Executive Health Chip */}
-        <div className="hidden xl:flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-[11px] font-bold text-emerald-700 dark:text-emerald-300">
-          <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-          <span>Live Health: 98.4% Delivery</span>
-        </div>
 
-        {/* Link to Factory Station for Owners/Super Admins */}
-        <Link
-          href="/factory/dashboard"
-          className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs font-semibold transition-colors border border-slate-200 dark:border-slate-700"
-          title="Inspect Shop-Floor Factory Station"
-        >
-          <Factory size={14} className="text-emerald-600 dark:text-emerald-400" />
-          <span>Factory Station</span>
-          <ExternalLink size={12} className="text-slate-400" />
-        </Link>
 
-        {/* How ERP Works Guide Button */}
-        <button
-          onClick={() => setShowGuideModal(true)}
-          className="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-50 text-blue-700 dark:text-blue-300 dark:bg-blue-950/40 hover:bg-blue-100 text-xs font-semibold transition-all border border-blue-200 dark:border-blue-800"
-          title="Understanding GarmentFlow ERP in Plain English"
-        >
-          <Sparkles size={14} className="text-blue-600 dark:text-blue-400" />
-          <span>ERP Guide</span>
-        </button>
 
-        {/* Dark Mode */}
-        <button
-          onClick={toggleDarkMode}
-          className="p-2 rounded-lg text-slate-500 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-          aria-label="Toggle theme"
-        >
-          {darkMode ? <Sun size={17} /> : <Moon size={17} />}
-        </button>
+
 
         {/* Notifications */}
-        <div className="relative">
-          <button
-            onClick={() => setShowNotifications(!showNotifications)}
-            className="p-2 rounded-lg text-slate-500 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors relative"
-            aria-label="Notifications"
-          >
-            <Bell size={17} />
-            <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-blue-600" />
-          </button>
-
-          {showNotifications && (
-            <div className="absolute right-0 top-full mt-2 w-80 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-xl p-3 z-50">
-              <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800">
-                <span className="text-xs font-bold text-slate-900 dark:text-white">Alerts & Notices</span>
-                <span className="text-[10px] text-blue-600 font-semibold cursor-pointer hover:underline">Mark read</span>
-              </div>
-              <div className="mt-2 space-y-2 max-h-64 overflow-y-auto">
-                <div className="p-2 rounded-xl bg-purple-50/50 dark:bg-purple-950/20 text-xs">
-                  <p className="font-semibold text-slate-800 dark:text-slate-200">GST Invoice INV-2025-0091 Approved</p>
-                  <p className="text-[10px] text-slate-400 mt-0.5">Value: ₹31.2 Lakhs • Export LUT filed</p>
-                </div>
-                <div className="p-2 rounded-xl bg-amber-50/50 dark:bg-amber-950/20 text-xs">
-                  <p className="font-semibold text-slate-800 dark:text-slate-200">Fabric Shortage Alert (3 Rolls)</p>
-                  <p className="text-[10px] text-slate-400 mt-0.5">ORD-2025-0003 Poplin 60s compact below reorder</p>
-                </div>
-                <div className="p-2 rounded-xl bg-blue-50/50 dark:bg-blue-950/20 text-xs">
-                  <p className="font-semibold text-slate-800 dark:text-slate-200">Production Output Milestone</p>
-                  <p className="text-[10px] text-slate-400 mt-0.5">Jaipur Unit crossed 3,400 pcs today</p>
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
+        <NotificationDropdown basePath="/owner" accentColor="purple" />
 
         {/* User Profile Menu */}
         <div className="relative">

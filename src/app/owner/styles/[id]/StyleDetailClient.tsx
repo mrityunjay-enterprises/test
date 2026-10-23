@@ -5,22 +5,34 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { styles as initialStyles, buyers } from "@/lib/demo-data";
 import { Style, StyleAttachment } from "@/lib/types";
+import { Breadcrumb } from "@/components/ui/breadcrumb";
+import { useScrollLock } from "@/lib/hooks/use-scroll-lock";
 import {
   ArrowLeft, Shirt, FileText, Image as ImageIcon, UploadCloud, Plus,
-  CheckCircle2, Download, Eye, X, Layers, Ruler, Scissors, Trash2, Edit3, Save, Paperclip
+  CheckCircle2, Download, Eye, X, Layers, Ruler, Scissors, Trash2, Edit3, Save, Paperclip,
+  AlertTriangle
 } from "lucide-react";
 
 export default function StyleDetailClient({ id }: { id: string }) {
   const router = useRouter();
   const styleId = id;
 
-  const [style, setStyle] = useState<Style | null>(null);
+  const [style, setStyle] = useState<Style | null>(() => initialStyles.find((s) => s.id === id) || null);
   const [activeTab, setActiveTab] = useState<"techpack" | "bom" | "measurements" | "operations">("techpack");
-  const [selectedAttachment, setSelectedAttachment] = useState<StyleAttachment | null>(null);
+  const [selectedAttachment, setSelectedAttachment] = useState<StyleAttachment | null>(() => {
+    const s = initialStyles.find((st) => st.id === id);
+    return s && s.attachments && s.attachments.length > 0 ? s.attachments[0] : null;
+  });
 
   // Quick Upload State
   const [uploading, setUploading] = useState(false);
   const [toastMsg, setToastMsg] = useState("");
+
+  // Document Deletion Modal (Item 5)
+  const [deleteAttachmentId, setDeleteAttachmentId] = useState<string | null>(null);
+
+  useScrollLock(!!deleteAttachmentId);
+
 
   useEffect(() => {
     try {
@@ -113,9 +125,9 @@ export default function StyleDetailClient({ id }: { id: string }) {
     });
   };
 
-  const removeAttachment = (attId: string) => {
-    if (!confirm("Are you sure you want to delete this document from the style?")) return;
-
+  const confirmDeleteAttachment = () => {
+    if (!deleteAttachmentId) return;
+    const attId = deleteAttachmentId;
     const remaining = (style.attachments || []).filter((a) => a.id !== attId);
     const updatedStyle = { ...style, attachments: remaining };
     setStyle(updatedStyle);
@@ -132,6 +144,9 @@ export default function StyleDetailClient({ id }: { id: string }) {
     } catch {
       // fallback
     }
+    setDeleteAttachmentId(null);
+    setToastMsg("Attachment removed successfully");
+    setTimeout(() => setToastMsg(""), 3000);
   };
 
   return (
@@ -143,17 +158,22 @@ export default function StyleDetailClient({ id }: { id: string }) {
         </div>
       )}
 
-      {/* Navigation & Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <Link href="/owner/styles" className="inline-flex items-center gap-1.5 text-xs font-semibold text-indigo-600 hover:underline mb-1">
-            <ArrowLeft size={14} /> Back to Style Master
-          </Link>
-          <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">{style.styleName}</h1>
-            <span className="text-xs font-mono px-2.5 py-1 rounded-lg bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 font-bold">{style.styleNumber}</span>
-            <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-700 uppercase">{style.status}</span>
-          </div>
+      {/* Navigation & Header with Breadcrumbs (Item 6) */}
+      <div className="space-y-2">
+        <Breadcrumb
+          items={[
+            { label: "Owner Portal", href: "/owner/dashboard" },
+            { label: "Styles & Tech Packs", href: "/owner/styles" },
+            { label: `${style.styleNumber} — ${style.styleName}` }
+          ]}
+        />
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <div className="flex items-center gap-3">
+              <h1 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">{style.styleName}</h1>
+              <span className="text-xs font-mono px-2.5 py-1 rounded-lg bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 font-bold">{style.styleNumber}</span>
+              <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-700 uppercase">{style.status}</span>
+            </div>
           <p className="text-sm text-slate-500 mt-1">
             Buyer: <span className="font-semibold text-slate-700 dark:text-slate-300">{style.buyerName}</span> • Season: {style.season} {style.year} • Category: {style.category}
           </p>
@@ -168,6 +188,8 @@ export default function StyleDetailClient({ id }: { id: string }) {
           </label>
         </div>
       </div>
+      </div>
+
 
       {/* Tabs */}
       <div className="flex border-b border-slate-200 dark:border-slate-800 gap-6 text-sm font-semibold">
@@ -245,7 +267,7 @@ export default function StyleDetailClient({ id }: { id: string }) {
 
                     <div className="flex items-center gap-1">
                       <button
-                        onClick={(e) => { e.stopPropagation(); removeAttachment(att.id); }}
+                        onClick={(e) => { e.stopPropagation(); setDeleteAttachmentId(att.id); }}
                         className="p-1 rounded text-slate-400 hover:text-red-500 transition-colors"
                         title="Delete file"
                       >
@@ -394,6 +416,44 @@ export default function StyleDetailClient({ id }: { id: string }) {
               <tr className="border-b border-slate-100 dark:border-slate-800"><td>4</td><td className="font-semibold text-slate-800 dark:text-white">Side Seam & Bottom Hem</td><td>Overlock + Hemmer</td><td>2.20</td><td>27 pcs</td></tr>
             </tbody>
           </table>
+        </div>
+      )}
+
+      {/* Delete Document Confirmation Modal (Item 5) */}
+      {deleteAttachmentId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in" onClick={() => setDeleteAttachmentId(null)}>
+          <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-sm w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-800 space-y-4" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center gap-3 text-rose-600">
+              <div className="p-3 rounded-2xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900">
+                <AlertTriangle size={22} />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-slate-900 dark:text-white">Delete Attachment</h3>
+                <p className="text-xs text-slate-500">Remove document from style</p>
+              </div>
+            </div>
+
+            <p className="text-xs text-slate-600 dark:text-slate-400">
+              Are you sure you want to delete this file from the tech pack? This action cannot be undone.
+            </p>
+
+            <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-100 dark:border-slate-800">
+              <button
+                type="button"
+                onClick={() => setDeleteAttachmentId(null)}
+                className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={confirmDeleteAttachment}
+                className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold shadow-md shadow-rose-600/20 transition-colors cursor-pointer"
+              >
+                Delete File
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

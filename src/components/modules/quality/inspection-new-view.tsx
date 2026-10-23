@@ -20,13 +20,10 @@ export function InspectionNewView({ basePath }: { basePath?: string }) {
   const [formData, setFormData] = useState({
     orderId: "",
     stage: stages[0],
-    checkedQty: "250",
-    defects: [
-      { type: "Skip Stitch", count: 3 },
-      { type: "Stain", count: 1 }
-    ],
-    remarks: "Minor stitching skips noticed on seam B. Sent for line rework.",
-    inspectorName: "Kavita Sharma"
+    checkedQty: "",
+    defects: [] as Array<{ type: string; count: number }>,
+    remarks: "",
+    inspectorName: ""
   });
 
   useEffect(() => {

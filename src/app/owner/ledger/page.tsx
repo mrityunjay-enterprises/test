@@ -1,6 +1,6 @@
 "use client";
-import { ReconciliationView } from "@/components/modules/job-work/reconciliation-view";
+import { LedgerView } from "@/components/modules/finance/ledger-view";
 
 export default function OwnerLedgerPage() {
-  return <ReconciliationView basePath="/owner" />;
+  return <LedgerView basePath="/owner" />;
 }

@@ -2,8 +2,9 @@
 
 import React, { useState, useMemo, useEffect } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { cn, formatCurrency, formatNumber, formatDate, getStatusColor } from "@/lib/utils";
+import { useScrollLock } from "@/lib/hooks/use-scroll-lock";
 import { Order, OrderStatus } from "@/lib/types";
 import {
   getStoredOrders,
@@ -14,11 +15,13 @@ import {
   WORKFLOW_EVENT,
   WORKFLOW_STAGES_SEQUENCE
 } from "@/lib/workflow-service";
+import { OrderManufacturingWorkflowModal } from "./order-manufacturing-workflow-modal";
 import {
   Search, Filter, Download, Plus, ChevronDown, MoreHorizontal,
   Eye, Edit, Copy, Trash2, ArrowUpDown, Package, Calendar,
   AlertTriangle, CheckCircle, Clock, SlidersHorizontal, Columns3,
-  CheckCircle2, Receipt, ArrowRight, X, Sparkles, Building2, Truck, Scissors
+  CheckCircle2, Receipt, ArrowRight, X, Sparkles, Building2, Truck, Scissors,
+  Monitor, ShieldCheck, Layers, ExternalLink
 } from "lucide-react";
 
 const statusFilters = [
@@ -33,6 +36,20 @@ const priorityColors: Record<string, string> = {
   medium: "text-blue-600 bg-blue-50 dark:bg-blue-900/30 dark:text-blue-400",
   low: "text-slate-600 bg-slate-50 dark:bg-slate-700 dark:text-slate-400",
 };
+
+function getOrderNodeInfo(status: OrderStatus) {
+  const item = WORKFLOW_STAGES_SEQUENCE.find(s => s.status === status);
+  if (item) return item;
+  return {
+    status,
+    label: status.replace(/-/g, " "),
+    department: "Production",
+    nodeNumber: "Node 01",
+    nodeName: "Factory Workstation",
+    panel: "Factory Station" as const,
+    actionNote: ""
+  };
+}
 
 function StatusBadge({ status }: { status: string }) {
   return (
@@ -59,17 +76,41 @@ function ProgressBar({ value, total, color = "indigo" }: { value: number; total:
 
 export function OrdersView({ basePath }: { basePath?: string }) {
   const pathname = usePathname();
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const prefix = basePath || (pathname?.startsWith("/owner") ? "/owner" : pathname?.startsWith("/factory") ? "/factory" : "/owner");
 
   const [ordersList, setOrdersList] = useState<Order[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState("All");
+  
+  // Read initial filter from URL if present
+  const initialStatusFromUrl = searchParams?.get("status") || "All";
+  const [statusFilter, setStatusFilter] = useState(initialStatusFromUrl);
   const [sortField, setSortField] = useState<string>("orderDate");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
   const [selectedOrders, setSelectedOrders] = useState<string[]>([]);
   const [showActionMenu, setShowActionMenu] = useState<string | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [lifecycleModalOrder, setLifecycleModalOrder] = useState<Order | null>(null);
+
+  // Cancellation Modal State (Item 5: Custom Confirmation Modal)
+  const [cancelOrderTarget, setCancelOrderTarget] = useState<{ id: string; orderNo: string } | null>(null);
+  const [cancelReason, setCancelReason] = useState("");
+
+  useScrollLock(!!cancelOrderTarget || !!lifecycleModalOrder);
+
+  // Handle Status Filter Change with URL Synchronization (Item 3)
+  const handleStatusFilterChange = (newStatus: string) => {
+    setStatusFilter(newStatus);
+    const params = new URLSearchParams(searchParams?.toString() || "");
+    if (newStatus === "All") {
+      params.delete("status");
+    } else {
+      params.set("status", newStatus);
+    }
+    const query = params.toString() ? `?${params.toString()}` : "";
+    router.replace(`${pathname}${query}`, { scroll: false });
+  };
 
   const loadData = () => {
     const data = getStoredOrders();
@@ -161,13 +202,13 @@ export function OrdersView({ basePath }: { basePath?: string }) {
     }
   };
 
-  // 3. Cancel Order Action
-  const handleCancelOrder = (orderId: string, orderNo: string) => {
-    if (confirm(`Are you sure you want to cancel order ${orderNo}?`)) {
-      updateOrderStatus(orderId, "cancelled");
-      setShowActionMenu(null);
-      showToast(`Order ${orderNo} marked as CANCELLED.`);
-    }
+  // 3. Cancel Order Action via Custom Modal
+  const handleConfirmCancelOrder = () => {
+    if (!cancelOrderTarget) return;
+    updateOrderStatus(cancelOrderTarget.id, "cancelled");
+    showToast(`Order ${cancelOrderTarget.orderNo} marked as CANCELLED.${cancelReason ? ` Reason: ${cancelReason}` : ""}`);
+    setCancelOrderTarget(null);
+    setCancelReason("");
   };
 
   // 4. Duplicate Order Action
@@ -191,6 +232,52 @@ export function OrdersView({ basePath }: { basePath?: string }) {
     showToast(`Order duplicated as ${duplicated.orderNumber}`);
   };
 
+  const handleExportOrders = () => {
+    const timestamp = new Date().toISOString().split("T")[0];
+    const headers = [
+      "Order Number",
+      "Buyer Name",
+      "Style Name",
+      "Buyer PO",
+      "Order Date",
+      "Delivery Date",
+      "Total Quantity",
+      "Cutting Qty",
+      "Stitching Qty",
+      "Packed Qty",
+      "Dispatched Qty",
+      "Unit Price (INR)",
+      "Total Value (INR)",
+      "Status",
+      "Priority"
+    ];
+    const rows = filteredOrders.map(o => [
+      o.orderNumber,
+      o.buyerName,
+      o.styleName || o.styleId,
+      o.buyerPO || "-",
+      o.orderDate,
+      o.deliveryDate,
+      o.totalQuantity,
+      o.cuttingQty || 0,
+      o.stitchingQty || 0,
+      o.packedQty || 0,
+      o.dispatchedQty || 0,
+      o.unitPrice,
+      o.totalValue,
+      o.status,
+      o.priority
+    ]);
+    const csvContent = "data:text/csv;charset=utf-8," + [headers, ...rows].map(e => e.map((cell: any) => `"${String(cell ?? "").replace(/"/g, '""')}"`).join(",")).join("\n");
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `garmentflow_orders_${timestamp}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   return (
     <div className="space-y-6 animate-fade-in">
       {/* Toast Notification */}
@@ -208,6 +295,14 @@ export function OrdersView({ basePath }: { basePath?: string }) {
           <p className="text-sm text-slate-500 mt-1">{ordersList.length} total orders • {ordersList.filter(o => !["completed", "cancelled"].includes(o.status)).length} active in production</p>
         </div>
         <div className="flex items-center gap-2">
+          <button
+            onClick={handleExportOrders}
+            className="flex items-center gap-2 px-3.5 py-2.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors shadow-sm"
+            title="Export orders to CSV"
+          >
+            <Download size={16} />
+            <span className="hidden sm:inline">Export CSV</span>
+          </button>
           <Link href={`${prefix}/orders/pipeline`} className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors shadow-sm">
             <Columns3 size={16} />
             <span className="hidden sm:inline">Kanban Pipeline</span>
@@ -235,7 +330,7 @@ export function OrdersView({ basePath }: { basePath?: string }) {
           <div className="flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0">
             <select
               value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
+              onChange={(e) => handleStatusFilterChange(e.target.value)}
               className="h-10 px-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/40"
             >
               {statusFilters.map(sf => (
@@ -261,6 +356,7 @@ export function OrdersView({ basePath }: { basePath?: string }) {
                 <th className="px-4 py-3 text-left cursor-pointer hover:text-slate-900" onClick={() => toggleSort("orderNumber")}>
                   <div className="flex items-center gap-1">Order # <ArrowUpDown size={12} /></div>
                 </th>
+                <th className="px-4 py-3 text-left">Active Node</th>
                 <th className="px-4 py-3 text-left cursor-pointer hover:text-slate-900" onClick={() => toggleSort("buyerName")}>
                   <div className="flex items-center gap-1">Buyer <ArrowUpDown size={12} /></div>
                 </th>
@@ -270,7 +366,7 @@ export function OrdersView({ basePath }: { basePath?: string }) {
                 </th>
                 <th className="px-4 py-3 text-right">Value</th>
                 <th className="px-4 py-3 text-center">Status</th>
-                <th className="px-4 py-3 text-left">Progress</th>
+                <th className="px-4 py-3 text-left">Floor Progress</th>
                 <th className="px-4 py-3 text-left cursor-pointer hover:text-slate-900" onClick={() => toggleSort("deliveryDate")}>
                   <div className="flex items-center gap-1">Delivery <ArrowUpDown size={12} /></div>
                 </th>
@@ -282,6 +378,8 @@ export function OrdersView({ basePath }: { basePath?: string }) {
                 const totalProgress = Math.round(
                   ((order.cuttingQty + order.stitchingQty + order.finishingQty + order.packedQty) / (order.totalQuantity * 4)) * 100
                 );
+                const nodeInfo = getOrderNodeInfo(order.status);
+
                 return (
                   <tr key={order.id} className="border-b border-slate-50 dark:border-slate-800/50 hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors">
                     <td className="px-4 py-3.5">
@@ -296,11 +394,21 @@ export function OrdersView({ basePath }: { basePath?: string }) {
                         className="rounded border-slate-300"
                       />
                     </td>
-                    <td className="px-4 py-3.5">
-                      <p className="font-semibold text-indigo-600 text-sm">{order.orderNumber}</p>
+                    <td className="px-4 py-3.5 cursor-pointer" onClick={() => setLifecycleModalOrder(order)}>
+                      <p className="font-semibold text-indigo-600 text-sm hover:underline">{order.orderNumber}</p>
                       <p className="text-xs text-slate-400 font-mono mt-0.5">{order.buyerPO}</p>
                     </td>
-                    <td className="px-4 py-3.5">
+                    <td className="px-4 py-3.5 cursor-pointer" onClick={() => setLifecycleModalOrder(order)}>
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-slate-900 text-white dark:bg-slate-700 whitespace-nowrap">
+                          {nodeInfo.nodeNumber}
+                        </span>
+                        <span className="text-xs text-slate-700 dark:text-slate-300 font-medium truncate max-w-[120px]" title={nodeInfo.department}>
+                          {nodeInfo.nodeName.split(" ")[0]}
+                        </span>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3.5 cursor-pointer" onClick={() => setLifecycleModalOrder(order)}>
                       <p className="text-sm font-medium text-slate-800 dark:text-slate-200">{order.buyerName}</p>
                       <span className={cn(
                         "text-[10px] font-semibold px-1.5 py-0.5 rounded-full inline-block mt-0.5",
@@ -309,7 +417,7 @@ export function OrdersView({ basePath }: { basePath?: string }) {
                         {order.priority}
                       </span>
                     </td>
-                    <td className="px-4 py-3.5">
+                    <td className="px-4 py-3.5 cursor-pointer" onClick={() => setLifecycleModalOrder(order)}>
                       <p className="text-sm text-slate-700 dark:text-slate-300 font-medium">{order.styleName}</p>
                       <p className="text-xs text-slate-400 font-mono">{order.styleNumber}</p>
                     </td>
@@ -322,7 +430,7 @@ export function OrdersView({ basePath }: { basePath?: string }) {
                     <td className="px-4 py-3.5 text-center">
                       <StatusBadge status={order.status} />
                     </td>
-                    <td className="px-4 py-3.5 min-w-[140px]">
+                    <td className="px-4 py-3.5 min-w-[140px] cursor-pointer" onClick={() => setLifecycleModalOrder(order)}>
                       <ProgressBar value={totalProgress} total={100} color={totalProgress > 75 ? "emerald" : "indigo"} />
                       <div className="flex gap-2 text-[10px] text-slate-400 mt-1">
                         <span>C: {order.cuttingQty}</span>
@@ -344,7 +452,7 @@ export function OrdersView({ basePath }: { basePath?: string }) {
                         {showActionMenu === order.id && (
                           <>
                             <div className="fixed inset-0 z-40" onClick={() => setShowActionMenu(null)} />
-                            <div className="absolute right-0 top-full mt-1 w-52 bg-white dark:bg-slate-800 rounded-xl shadow-xl border border-slate-200 dark:border-slate-700 py-1 z-50 animate-scale-up">
+                            <div className="absolute right-0 top-full mt-1 w-56 bg-white dark:bg-slate-800 rounded-xl shadow-xl border border-slate-200 dark:border-slate-700 py-1 z-50 animate-scale-up">
                               {getNextStage(order.status).nextStatus && (
                                 <button
                                   onClick={() => handleAdvanceStage(order.id)}
@@ -365,13 +473,13 @@ export function OrdersView({ basePath }: { basePath?: string }) {
                                 onClick={() => { setShowActionMenu(null); setLifecycleModalOrder(order); }}
                                 className="flex items-center gap-2 px-3 py-2 w-full text-xs text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 text-left"
                               >
-                                <Eye size={14} /> View Order Lifecycle
+                                <Eye size={14} /> View Order Dossier & Nodes
                               </button>
                               <Link
                                 href={`${prefix}/invoices/new?orderId=${order.id}`}
                                 className="flex items-center gap-2 px-3 py-2 w-full text-xs text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 text-left"
                               >
-                                <Receipt size={14} /> Create Invoice
+                                <Receipt size={14} /> Create GST Invoice
                               </Link>
                               <button
                                 onClick={() => handleDuplicateOrder(order)}
@@ -382,7 +490,11 @@ export function OrdersView({ basePath }: { basePath?: string }) {
                               <div className="border-t border-slate-100 dark:border-slate-700 my-1" />
                               {order.status !== "cancelled" && order.status !== "completed" && (
                                 <button
-                                  onClick={() => handleCancelOrder(order.id, order.orderNumber)}
+                                  onClick={() => {
+                                    setShowActionMenu(null);
+                                    setCancelOrderTarget({ id: order.id, orderNo: order.orderNumber });
+                                    setCancelReason("");
+                                  }}
                                   className="flex items-center gap-2 px-3 py-2 w-full text-xs text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 text-left font-medium"
                                 >
                                   <Trash2 size={14} /> Cancel Order
@@ -401,78 +513,61 @@ export function OrdersView({ basePath }: { basePath?: string }) {
         </div>
       </div>
 
-      {/* Order Lifecycle Modal */}
+      {/* Interactive Manufacturing Workflow & Dual Labor Payment Hub Modal */}
       {lifecycleModalOrder && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in">
-          <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 p-6 max-w-2xl w-full shadow-2xl space-y-6">
-            <div className="flex items-center justify-between pb-4 border-b border-slate-100 dark:border-slate-800">
+        <OrderManufacturingWorkflowModal
+          order={lifecycleModalOrder}
+          onClose={() => setLifecycleModalOrder(null)}
+          onOrderUpdated={() => loadData()}
+        />
+      )}
+
+      {/* Cancellation Confirmation Modal (Item 5) */}
+      {cancelOrderTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in" onClick={() => setCancelOrderTarget(null)}>
+          <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-800 space-y-4" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center gap-3 text-rose-600">
+              <div className="p-3 rounded-2xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900">
+                <AlertTriangle size={24} />
+              </div>
               <div>
-                <span className="text-xs font-bold text-indigo-600 uppercase tracking-wider">Garment Lifecycle Pipeline</span>
-                <h3 className="text-lg font-bold text-slate-900 dark:text-white">{lifecycleModalOrder.orderNumber} • {lifecycleModalOrder.styleName}</h3>
-                <p className="text-xs text-slate-400">Buyer: {lifecycleModalOrder.buyerName} | Qty: {formatNumber(lifecycleModalOrder.totalQuantity)} pcs</p>
-              </div>
-              <button onClick={() => setLifecycleModalOrder(null)} className="p-2 rounded-xl text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800">
-                <X size={18} />
-              </button>
-            </div>
-
-            {/* Stages Visual Progression */}
-            <div className="space-y-4">
-              <p className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">Current Manufacturing Status</p>
-              <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200/60 dark:border-slate-700/60">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-xs font-semibold text-slate-500">Active Department Stage:</span>
-                  <StatusBadge status={lifecycleModalOrder.status} />
-                </div>
-                <div className="space-y-2 mt-4">
-                  {WORKFLOW_STAGES_SEQUENCE.map((stage, idx) => {
-                    const currentIndex = WORKFLOW_STAGES_SEQUENCE.findIndex(s => s.status === lifecycleModalOrder.status);
-                    const isDone = idx < currentIndex;
-                    const isCurrent = idx === currentIndex;
-
-                    return (
-                      <div key={stage.status} className={cn("flex items-center gap-3 p-2.5 rounded-xl text-xs transition-all", isCurrent ? "bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800 font-bold text-indigo-900 dark:text-indigo-200" : isDone ? "text-slate-400 line-through opacity-70" : "text-slate-500")}>
-                        <div className={cn("w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold", isCurrent ? "bg-indigo-600 text-white" : isDone ? "bg-emerald-500 text-white" : "bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-400")}>
-                          {isDone ? "✓" : idx + 1}
-                        </div>
-                        <div className="flex-1 flex items-center justify-between">
-                          <span>{stage.label}</span>
-                          <span className="text-[11px] text-slate-400">{stage.department}</span>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
+                <h3 className="text-base font-bold text-slate-900 dark:text-white">Cancel Production Order</h3>
+                <p className="text-xs text-slate-500 font-mono">{cancelOrderTarget.orderNo}</p>
               </div>
             </div>
 
-            {/* Modal Actions */}
-            <div className="flex items-center justify-between pt-2 border-t border-slate-100 dark:border-slate-800">
-              <Link
-                href={`${prefix}/dispatch`}
-                className="text-xs font-bold text-indigo-600 hover:underline flex items-center gap-1"
+            <p className="text-xs text-slate-600 dark:text-slate-400">
+              Are you sure you want to cancel order <strong className="text-slate-900 dark:text-white font-mono">{cancelOrderTarget.orderNo}</strong>? This action will freeze floor allocations, update the production pipeline, and log the event.
+            </p>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
+                Cancellation Reason (Required for Audit Trail)
+              </label>
+              <textarea
+                rows={3}
+                value={cancelReason}
+                onChange={(e) => setCancelReason(e.target.value)}
+                placeholder="e.g. Buyer changed delivery window, fabric defective, export license issue..."
+                className="w-full p-3 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs focus:outline-none focus:ring-2 focus:ring-rose-500/40 text-slate-800 dark:text-slate-200"
+              />
+            </div>
+
+            <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-100 dark:border-slate-800">
+              <button
+                type="button"
+                onClick={() => setCancelOrderTarget(null)}
+                className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
               >
-                Go to Dispatch Hub <ArrowRight size={13} />
-              </Link>
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => setLifecycleModalOrder(null)}
-                  className="px-4 py-2 rounded-xl text-xs font-medium text-slate-600 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-                >
-                  Close
-                </button>
-                {getNextStage(lifecycleModalOrder.status).nextStatus && (
-                  <button
-                    type="button"
-                    onClick={() => handleAdvanceStage(lifecycleModalOrder.id)}
-                    className="px-4 py-2 rounded-xl text-xs font-bold bg-indigo-600 hover:bg-indigo-700 text-white transition-colors flex items-center gap-1.5 shadow-sm"
-                  >
-                    <span>{getNextStage(lifecycleModalOrder.status).label}</span>
-                    <ArrowRight size={14} />
-                  </button>
-                )}
-              </div>
+                Keep Order
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmCancelOrder}
+                className="px-5 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold shadow-md shadow-rose-600/20 transition-colors cursor-pointer"
+              >
+                Confirm Cancellation
+              </button>
             </div>
           </div>
         </div>

@@ -10,19 +10,26 @@ import {
   CheckCircle2, Download, Eye, X, Layers, Ruler, Scissors, Trash2, Edit3, Save, Paperclip
 } from "lucide-react";
 
+import { Breadcrumb } from "@/components/ui/breadcrumb";
+
 export function StyleDetailView({ id, basePath }: { id: string; basePath?: string }) {
   const router = useRouter();
   const pathname = usePathname();
   const prefix = basePath || (pathname?.startsWith("/owner") ? "/owner" : pathname?.startsWith("/factory") ? "/factory" : "/owner");
+  const isOwner = prefix.startsWith("/owner");
   const styleId = id;
 
-  const [style, setStyle] = useState<Style | null>(null);
+  const [style, setStyle] = useState<Style | null>(() => initialStyles.find((s) => s.id === id) || null);
   const [activeTab, setActiveTab] = useState<"techpack" | "bom" | "measurements" | "operations">("techpack");
-  const [selectedAttachment, setSelectedAttachment] = useState<StyleAttachment | null>(null);
+  const [selectedAttachment, setSelectedAttachment] = useState<StyleAttachment | null>(() => {
+    const s = initialStyles.find((st) => st.id === id);
+    return s && s.attachments && s.attachments.length > 0 ? s.attachments[0] : null;
+  });
 
   // Quick Upload State
   const [uploading, setUploading] = useState(false);
   const [toastMsg, setToastMsg] = useState("");
+
 
   useEffect(() => {
     try {
@@ -119,30 +126,37 @@ export function StyleDetailView({ id, basePath }: { id: string; basePath?: strin
         </div>
       )}
 
-      {/* Navigation & Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <Link href={`${prefix}/styles`} className="inline-flex items-center gap-1.5 text-xs font-semibold text-indigo-600 hover:underline mb-1">
-            <ArrowLeft size={14} /> Back to Style Master
-          </Link>
-          <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">{style.styleName}</h1>
-            <span className="text-xs font-mono px-2.5 py-1 rounded-lg bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 font-bold">{style.styleNumber}</span>
-            <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-700 uppercase">{style.status}</span>
+      {/* Navigation & Header with Breadcrumb (Owner Item 6) */}
+      <div className="space-y-2">
+        <Breadcrumb
+          items={[
+            { label: isOwner ? "Owner Portal" : "Factory Portal", href: `${prefix}/dashboard` },
+            { label: "Styles & Tech Packs", href: `${prefix}/styles` },
+            { label: `${style.styleNumber} — ${style.styleName}` }
+          ]}
+        />
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <div className="flex items-center gap-3">
+              <h1 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">{style.styleName}</h1>
+              <span className="text-xs font-mono px-2.5 py-1 rounded-lg bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 font-bold">{style.styleNumber}</span>
+              <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-700 uppercase">{style.status}</span>
+            </div>
+            <p className="text-sm text-slate-500 mt-1">
+              Buyer: <span className="font-semibold text-slate-700 dark:text-slate-300">{style.buyerName}</span> • Season: {style.season} {style.year} • Category: {style.category}
+            </p>
           </div>
-          <p className="text-sm text-slate-500 mt-1">
-            Buyer: <span className="font-semibold text-slate-700 dark:text-slate-300">{style.buyerName}</span> • Season: {style.season} {style.year} • Category: {style.category}
-          </p>
-        </div>
 
-        {/* Action: Upload File */}
-        <div className="flex items-center gap-2">
-          <label className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-indigo-600 text-white text-xs font-semibold hover:bg-indigo-700 transition-colors cursor-pointer shadow-sm shadow-indigo-500/25">
-            <UploadCloud size={16} /> Upload Image / PDF
-            <input type="file" multiple accept="image/*,.pdf" onChange={handleUploadFile} className="hidden" />
-          </label>
+          {/* Action: Upload File */}
+          <div className="flex items-center gap-2">
+            <label className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-indigo-600 text-white text-xs font-semibold hover:bg-indigo-700 transition-colors cursor-pointer shadow-sm shadow-indigo-500/25">
+              <UploadCloud size={16} /> Upload Image / PDF
+              <input type="file" multiple accept="image/*,.pdf" onChange={handleUploadFile} className="hidden" />
+            </label>
+          </div>
         </div>
       </div>
+
 
       {/* Tabs */}
       <div className="flex border-b border-slate-200 dark:border-slate-800 gap-6 text-sm font-semibold">

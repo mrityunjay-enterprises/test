@@ -318,3 +318,23 @@ body {
     padding: 6px 10px !important;
   }
 }
+
+/* Automatically lock background scroll whenever any modal popup or drawer is open */
+body:has(.fixed.inset-0),
+body:has([role="dialog"]),
+body:has([aria-modal="true"]),
+body.modal-open {
+  overflow: hidden !important;
+  touch-action: none;
+}
+
+/* Prevent modal scrolling from bubbling or chaining to the background page */
+.fixed.inset-0,
+[role="dialog"],
+[aria-modal="true"],
+.modal-content,
+.drawer-content {
+  overscroll-behavior: contain !important;
+}
+
+

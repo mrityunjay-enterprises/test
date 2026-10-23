@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, createContext, useContext, useEffect, useMemo } from "react";
+import React, { useState, createContext, useContext, useEffect, useMemo, useRef } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
@@ -37,7 +37,8 @@ import {
   X,
   ArrowRightLeft,
   Crown,
-  FileText
+  FileText,
+  Bell
 } from "lucide-react";
 import { GarmentFlowLogo } from "@/components/ui/logo";
 
@@ -81,25 +82,80 @@ export interface NavItem {
   badge?: string | number;
   badgeColor?: string;
   children?: NavChildItem[];
+  section?: string;
 }
 
 const ownerNavItems: NavItem[] = [
+  // 1. OVERVIEW
   {
     label: "Dashboard",
     href: "/owner/dashboard",
     icon: <LayoutDashboard size={18} />,
+    section: "Overview",
   },
+
+  // 2. COMMERCIAL & PRE-PRODUCTION
   {
     label: "Orders",
     href: "/owner/orders",
     icon: <ClipboardList size={18} />,
     badge: "Active",
     badgeColor: "bg-blue-600/30 text-blue-200 border border-blue-500/40",
+    section: "Commercial & Orders",
   },
+  {
+    label: "Buyers (CRM)",
+    href: "/owner/customers",
+    icon: <Users size={18} />,
+    section: "Commercial & Orders",
+  },
+  {
+    label: "Styles & Tech Packs",
+    href: "/owner/styles",
+    icon: <Shirt size={18} />,
+    section: "Commercial & Orders",
+  },
+  {
+    label: "Sampling Lab",
+    href: "/owner/sampling",
+    icon: <Sparkles size={18} />,
+    section: "Commercial & Orders",
+  },
+
+  // 3. PLANNING & SOURCING
+  {
+    label: "Planning (PPC)",
+    href: "/owner/planning",
+    icon: <GanttChart size={18} />,
+    section: "Planning & Sourcing",
+  },
+  {
+    label: "Store & Inventory",
+    href: "/owner/inventory",
+    icon: <Package size={18} />,
+    badge: 3,
+    badgeColor: "bg-amber-600/30 text-amber-200 border border-amber-500/40",
+    section: "Planning & Sourcing",
+  },
+  {
+    label: "Purchase Orders",
+    href: "/owner/purchase",
+    icon: <ShoppingBag size={18} />,
+    section: "Planning & Sourcing",
+  },
+  {
+    label: "Suppliers & Vendors",
+    href: "/owner/vendors",
+    icon: <Building2 size={18} />,
+    section: "Planning & Sourcing",
+  },
+
+  // 4. MANUFACTURING & OPERATIONS
   {
     label: "Production",
     href: "/owner/production",
     icon: <Factory size={18} />,
+    section: "Manufacturing & Floor",
     children: [
       { label: "Overview", href: "/owner/production" },
       { label: "Cutting Department", href: "/owner/cutting" },
@@ -111,58 +167,27 @@ const ownerNavItems: NavItem[] = [
     label: "Quality (QC)",
     href: "/owner/quality",
     icon: <Shield size={18} />,
+    section: "Manufacturing & Floor",
   },
   {
     label: "Packing",
     href: "/owner/packing",
     icon: <Archive size={18} />,
+    section: "Manufacturing & Floor",
   },
   {
     label: "Dispatch & Shipments",
     href: "/owner/dispatch",
     icon: <Truck size={18} />,
+    section: "Manufacturing & Floor",
   },
-  {
-    label: "Store & Inventory",
-    href: "/owner/inventory",
-    icon: <Package size={18} />,
-    badge: 3,
-    badgeColor: "bg-amber-600/30 text-amber-200 border border-amber-500/40",
-  },
-  {
-    label: "Purchase Orders",
-    href: "/owner/purchase",
-    icon: <ShoppingBag size={18} />,
-  },
-  {
-    label: "Suppliers & Vendors",
-    href: "/owner/vendors",
-    icon: <Building2 size={18} />,
-  },
-  {
-    label: "Planning (PPC)",
-    href: "/owner/planning",
-    icon: <GanttChart size={18} />,
-  },
-  {
-    label: "Styles & Tech Packs",
-    href: "/owner/styles",
-    icon: <Shirt size={18} />,
-  },
-  {
-    label: "Sampling Lab",
-    href: "/owner/sampling",
-    icon: <Sparkles size={18} />,
-  },
-  {
-    label: "Buyers (CRM)",
-    href: "/owner/customers",
-    icon: <Users size={18} />,
-  },
+
+  // 5. FINANCE & APPROVALS
   {
     label: "Finance & Costing",
     href: "/owner/invoices",
     icon: <Receipt size={18} />,
+    section: "Finance & Approvals",
     children: [
       { label: "Invoices & GST", href: "/owner/invoices" },
       { label: "Payment Receipts", href: "/owner/payments" },
@@ -171,9 +196,24 @@ const ownerNavItems: NavItem[] = [
     ],
   },
   {
+    label: "Approvals & Tasks",
+    href: "/owner/approvals",
+    icon: <CheckSquare size={18} />,
+    section: "Finance & Approvals",
+  },
+  {
+    label: "Reports & MIS",
+    href: "/owner/reports",
+    icon: <BarChart3 size={18} />,
+    section: "Finance & Approvals",
+  },
+
+  // 6. ADMINISTRATION & SETTINGS
+  {
     label: "HRMS & Attendance",
     href: "/owner/employees",
     icon: <UserCheck size={18} />,
+    section: "Administration & System",
     children: [
       { label: "Employees", href: "/owner/employees" },
       { label: "Attendance Summary", href: "/owner/attendance" },
@@ -182,24 +222,16 @@ const ownerNavItems: NavItem[] = [
     ],
   },
   {
-    label: "Approvals & Tasks",
-    href: "/owner/approvals",
-    icon: <CheckSquare size={18} />,
-  },
-  {
-    label: "Reports & MIS",
-    href: "/owner/reports",
-    icon: <BarChart3 size={18} />,
-  },
-  {
     label: "Company Documents",
     href: "/owner/documents",
     icon: <FileText size={18} />,
+    section: "Administration & System",
   },
   {
     label: "Settings & System",
     href: "/owner/settings",
     icon: <Settings size={18} />,
+    section: "Administration & System",
     children: [
       { label: "Company Settings", href: "/owner/settings" },
       { label: "System Users", href: "/owner/users" },
@@ -219,6 +251,41 @@ export function OwnerSidebar() {
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({});
   const [userName, setUserName] = useState("Arun Kapoor");
   const [userRole, setUserRole] = useState("Managing Director (MD)");
+
+  const asideRef = useRef<HTMLElement>(null);
+  const navRef = useRef<HTMLDivElement>(null);
+
+  // Prevent sidebar scroll from scrolling the main page
+  useEffect(() => {
+    const aside = asideRef.current;
+    const nav = navRef.current;
+    if (!aside || !nav) return;
+
+    const onWheel = (e: WheelEvent) => {
+      const { deltaY } = e;
+      if (!deltaY) return;
+
+      const isScrollingDown = deltaY > 0;
+      const isScrollingUp = deltaY < 0;
+      const atTop = nav.scrollTop <= 0;
+      const atBottom = nav.scrollTop + nav.clientHeight >= nav.scrollHeight - 1;
+
+      // Prevent window scroll chaining when reaching boundaries
+      if ((isScrollingUp && atTop) || (isScrollingDown && atBottom)) {
+        e.preventDefault();
+        return;
+      }
+
+      // If cursor is on sidebar header, search box, or footer, redirect scroll to the nav list
+      if (!nav.contains(e.target as Node)) {
+        nav.scrollTop += deltaY;
+        e.preventDefault();
+      }
+    };
+
+    aside.addEventListener("wheel", onWheel, { passive: false });
+    return () => aside.removeEventListener("wheel", onWheel);
+  }, []);
 
   useEffect(() => {
     try {
@@ -258,7 +325,9 @@ export function OwnerSidebar() {
     const q = searchFilter.toLowerCase();
     return ownerNavItems
       .map((item) => {
-        const matchesParent = item.label.toLowerCase().includes(q);
+        const matchesParent =
+          item.label.toLowerCase().includes(q) ||
+          Boolean(item.section && item.section.toLowerCase().includes(q));
         const matchingChildren = item.children?.filter((c) =>
           c.label.toLowerCase().includes(q)
         );
@@ -285,8 +354,10 @@ export function OwnerSidebar() {
 
       {/* Sidebar Container */}
       <aside
+        ref={asideRef}
+        style={{ overscrollBehavior: "contain" }}
         className={cn(
-          "fixed top-0 bottom-0 left-0 z-50 flex flex-col bg-slate-900 border-r border-slate-800 transition-all duration-300 shadow-xl select-none",
+          "fixed top-0 bottom-0 left-0 z-50 flex flex-col bg-slate-900 border-r border-slate-800 transition-all duration-300 shadow-xl select-none overscroll-contain",
           collapsed ? "w-[72px]" : "w-[264px]",
           mobileOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
         )}
@@ -294,17 +365,30 @@ export function OwnerSidebar() {
         {/* Brand Header */}
         <div className="h-16 flex items-center justify-between px-4 border-b border-slate-800 bg-slate-950/40">
           <Link href="/owner/dashboard" className="flex items-center gap-3 overflow-hidden group">
-            <GarmentFlowLogo size="sm" variant="dark" />
+            {/* Precision Woven Emblem */}
+            <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-indigo-600 via-indigo-700 to-slate-900 flex items-center justify-center flex-shrink-0 shadow-md shadow-indigo-600/25 border border-indigo-400/20">
+              <svg viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-4 h-4 text-white">
+                <path d="M18 4L29 10V26L18 32L7 26V10L18 4Z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" className="opacity-40" />
+                <path d="M18 8L25 12V24L18 28L11 24V12L18 8Z" fill="url(#gf-logo-sidebar-owner)" />
+                <path d="M12 15L18 19L24 15" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                <path d="M12 21L18 25L24 21" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                <line x1="18" y1="11" x2="18" y2="25" stroke="white" strokeWidth="2" strokeLinecap="round" />
+                <defs>
+                  <linearGradient id="gf-logo-sidebar-owner" x1="11" y1="8" x2="25" y2="28" gradientUnits="userSpaceOnUse">
+                    <stop stopColor="#6366F1" />
+                    <stop offset="1" stopColor="#4338CA" />
+                  </linearGradient>
+                </defs>
+              </svg>
+            </div>
+
             {!collapsed && (
-              <div className="flex flex-col min-w-0">
-                <span className="text-sm font-bold tracking-tight text-white flex items-center gap-1.5">
-                  GarmentFlow
-                  <span className="text-[10px] font-semibold px-1.5 py-0.2 rounded bg-blue-600/30 text-blue-300 border border-blue-500/30">
-                    ERP
-                  </span>
+              <div className="flex items-center gap-1.5 min-w-0">
+                <span className="text-base font-bold tracking-tight text-white leading-none">
+                  Garment<span className="text-indigo-400">Flow</span>
                 </span>
-                <span className="text-[11px] text-slate-400 font-medium truncate">
-                  Owner Portal
+                <span className="text-[10px] font-extrabold px-1.5 py-0.5 rounded bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 uppercase tracking-wider">
+                  ERP
                 </span>
               </div>
             )}
@@ -343,8 +427,12 @@ export function OwnerSidebar() {
         )}
 
         {/* Navigation List */}
-        <div className="flex-1 overflow-y-auto px-2 py-3 space-y-0.5 scrollbar-thin">
-          {filteredNavItems.map((item) => {
+        <div
+          ref={navRef}
+          style={{ overscrollBehavior: "contain" }}
+          className="flex-1 overflow-y-auto px-2 py-3 space-y-0.5 scrollbar-thin overscroll-contain"
+        >
+          {filteredNavItems.map((item, index) => {
             const hasChildren = item.children && item.children.length > 0;
             const isGroupOpen = openGroups[item.label] || Boolean(searchFilter.trim());
             const isSelfActive = cleanPath === item.href.replace(/\/$/, "");
@@ -355,152 +443,149 @@ export function OwnerSidebar() {
               );
             const isAnyActive = isSelfActive || isChildActive;
 
+            const isNewSection =
+              !searchFilter.trim() &&
+              Boolean(item.section) &&
+              (index === 0 || filteredNavItems[index - 1]?.section !== item.section);
+
             return (
-              <div key={item.label} className="space-y-0.5">
-                {hasChildren ? (
-                  // Parent Item with Submenu
-                  <div
-                    onClick={() => toggleGroup(item.label)}
-                    className={cn(
-                      "flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium cursor-pointer transition-colors group",
-                      isAnyActive
-                        ? "bg-slate-800 text-white font-semibold"
-                        : "text-slate-300 hover:bg-slate-800/60 hover:text-white"
-                    )}
-                    title={collapsed ? item.label : undefined}
-                  >
-                    <div className="flex items-center gap-2.5 min-w-0">
-                      <span
-                        className={cn(
-                          "flex-shrink-0 transition-colors",
-                          isAnyActive ? "text-blue-400" : "text-slate-400 group-hover:text-slate-200"
-                        )}
-                      >
-                        {item.icon}
-                      </span>
-                      {!collapsed && (
-                        <span className="truncate">{item.label}</span>
+              <React.Fragment key={item.label}>
+                {isNewSection && (
+                  !collapsed ? (
+                    <div
+                      className={cn(
+                        "px-3 pb-1 text-[10px] font-bold tracking-wider text-slate-500 uppercase select-none",
+                        index > 0 ? "pt-3.5 border-t border-slate-800/60 mt-2" : "pt-0.5"
                       )}
+                    >
+                      {item.section}
                     </div>
-
-                    {!collapsed && (
-                      <div className="flex items-center gap-1.5 flex-shrink-0">
-                        {item.badge && (
-                          <span
-                            className={cn(
-                              "text-[10px] font-bold px-1.5 py-0.2 rounded",
-                              item.badgeColor || "bg-slate-800 text-slate-300"
-                            )}
-                          >
-                            {item.badge}
-                          </span>
-                        )}
-                        <span className="text-slate-400">
-                          {isGroupOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                ) : (
-                  // Direct Link Item
-                  <Link
-                    href={item.href}
-                    onClick={() => setMobileOpen(false)}
-                    className={cn(
-                      "flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium transition-colors group",
-                      isSelfActive
-                        ? "bg-blue-600 text-white font-semibold shadow-sm"
-                        : "text-slate-300 hover:bg-slate-800/60 hover:text-white"
-                    )}
-                    title={collapsed ? item.label : undefined}
-                  >
-                    <div className="flex items-center gap-2.5 min-w-0">
-                      <span
-                        className={cn(
-                          "flex-shrink-0 transition-colors",
-                          isSelfActive ? "text-white" : "text-slate-400 group-hover:text-slate-200"
-                        )}
-                      >
-                        {item.icon}
-                      </span>
-                      {!collapsed && (
-                        <span className="truncate">{item.label}</span>
-                      )}
-                    </div>
-
-                    {!collapsed && item.badge && (
-                      <span
-                        className={cn(
-                          "text-[10px] font-bold px-1.5 py-0.2 rounded flex-shrink-0",
-                          item.badgeColor || "bg-slate-800 text-slate-300"
-                        )}
-                      >
-                        {item.badge}
-                      </span>
-                    )}
-                  </Link>
+                  ) : (
+                    index > 0 && <div className="my-2 border-t border-slate-800/80 mx-2" />
+                  )
                 )}
 
-                {/* Submenu Items */}
-                {hasChildren && isGroupOpen && !collapsed && (
-                  <div className="pl-7 pr-1 py-1 space-y-0.5 border-l border-slate-800 ml-4">
-                    {item.children?.map((child) => {
-                      const isSubActive = cleanPath === child.href.replace(/\/$/, "");
-                      return (
-                        <Link
-                          key={child.href}
-                          href={child.href}
-                          onClick={() => setMobileOpen(false)}
+                <div className="space-y-0.5">
+                  {hasChildren ? (
+                    // Parent Item with Submenu
+                    <div
+                      onClick={() => toggleGroup(item.label)}
+                      className={cn(
+                        "flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium cursor-pointer transition-colors group",
+                        isAnyActive
+                          ? "bg-slate-800 text-white font-semibold"
+                          : "text-slate-300 hover:bg-slate-800/60 hover:text-white"
+                      )}
+                      title={collapsed ? item.label : undefined}
+                    >
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <span
                           className={cn(
-                            "flex items-center justify-between px-2.5 py-1.5 rounded-md text-xs transition-colors",
-                            isSubActive
-                              ? "bg-blue-600 text-white font-semibold shadow-sm"
-                              : "text-slate-400 hover:bg-slate-800/70 hover:text-white"
+                            "flex-shrink-0 transition-colors",
+                            isAnyActive ? "text-blue-400" : "text-slate-400 group-hover:text-slate-200"
                           )}
                         >
-                          <span className="truncate">{child.label}</span>
-                          {child.badge && (
-                            <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-slate-800 text-slate-300">
-                              {child.badge}
+                          {item.icon}
+                        </span>
+                        {!collapsed && (
+                          <span className="truncate">{item.label}</span>
+                        )}
+                      </div>
+
+                      {!collapsed && (
+                        <div className="flex items-center gap-1.5 flex-shrink-0">
+                          {item.badge && (
+                            <span
+                              className={cn(
+                                "text-[10px] font-bold px-1.5 py-0.2 rounded",
+                                item.badgeColor || "bg-slate-800 text-slate-300"
+                              )}
+                            >
+                              {item.badge}
                             </span>
                           )}
-                        </Link>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
+                          <span className="text-slate-400">
+                            {isGroupOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    // Direct Link Item
+                    <Link
+                      href={item.href}
+                      onClick={() => setMobileOpen(false)}
+                      className={cn(
+                        "flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium transition-colors group",
+                        isSelfActive
+                          ? "bg-blue-600 text-white font-semibold shadow-sm"
+                          : "text-slate-300 hover:bg-slate-800/60 hover:text-white"
+                      )}
+                      title={collapsed ? item.label : undefined}
+                    >
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <span
+                          className={cn(
+                            "flex-shrink-0 transition-colors",
+                            isSelfActive ? "text-white" : "text-slate-400 group-hover:text-slate-200"
+                          )}
+                        >
+                          {item.icon}
+                        </span>
+                        {!collapsed && (
+                          <span className="truncate">{item.label}</span>
+                        )}
+                      </div>
+
+                      {!collapsed && item.badge && (
+                        <span
+                          className={cn(
+                            "text-[10px] font-bold px-1.5 py-0.2 rounded flex-shrink-0",
+                            item.badgeColor || "bg-slate-800 text-slate-300"
+                          )}
+                        >
+                          {item.badge}
+                        </span>
+                      )}
+                    </Link>
+                  )}
+
+                  {/* Submenu Items */}
+                  {hasChildren && isGroupOpen && !collapsed && (
+                    <div className="pl-7 pr-1 py-1 space-y-0.5 border-l border-slate-800 ml-4">
+                      {item.children?.map((child) => {
+                        const isSubActive = cleanPath === child.href.replace(/\/$/, "");
+                        return (
+                          <Link
+                            key={child.href}
+                            href={child.href}
+                            onClick={() => setMobileOpen(false)}
+                            className={cn(
+                              "flex items-center justify-between px-2.5 py-1.5 rounded-md text-xs transition-colors",
+                              isSubActive
+                                ? "bg-blue-600 text-white font-semibold shadow-sm"
+                                : "text-slate-400 hover:bg-slate-800/70 hover:text-white"
+                            )}
+                          >
+                            <span className="truncate">{child.label}</span>
+                            {child.badge && (
+                              <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-slate-800 text-slate-300">
+                                {child.badge}
+                              </span>
+                            )}
+                          </Link>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              </React.Fragment>
             );
           })}
         </div>
 
-        {/* Sidebar Footer: Portal Switcher & Collapse Button */}
-        <div className="p-3 border-t border-slate-800 bg-slate-950/50 space-y-2">
-          {!collapsed ? (
-            <div className="flex items-center justify-between p-2 rounded-lg bg-slate-800/60 border border-slate-700/60">
-              <div className="min-w-0">
-                <p className="text-xs font-bold text-white truncate">{userName}</p>
-                <p className="text-[10px] text-slate-400 truncate">{userRole}</p>
-              </div>
-              <Link
-                href="/factory/dashboard"
-                className="text-[11px] font-semibold px-2 py-1 rounded bg-slate-700 hover:bg-blue-600 text-slate-200 hover:text-white transition-colors flex items-center gap-1 flex-shrink-0"
-                title="Switch to Factory Station"
-              >
-                <ArrowRightLeft size={11} />
-                <span>Factory</span>
-              </Link>
-            </div>
-          ) : (
-            <Link
-              href="/factory/dashboard"
-              className="w-full py-1.5 flex items-center justify-center rounded-lg bg-slate-800 text-slate-300 hover:text-white hover:bg-blue-600 transition-colors"
-              title="Switch to Factory Station"
-            >
-              <ArrowRightLeft size={14} />
-            </Link>
-          )}
-
+        {/* Sidebar Footer: Collapse Button */}
+        <div className="p-3 border-t border-slate-800 bg-slate-950/50">
           <button
             onClick={() => setCollapsed(!collapsed)}
             className="hidden lg:flex w-full items-center justify-center py-1.5 text-[11px] font-semibold text-slate-400 hover:text-white hover:bg-slate-800 rounded-md transition-colors"

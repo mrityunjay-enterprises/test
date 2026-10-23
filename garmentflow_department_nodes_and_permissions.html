@@ -1,0 +1,1185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GarmentFlow ERP — Department Nodes & Permission Architecture (12 Nodes)</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --primary: #4f46e5;
+      --primary-light: #eef2ff;
+      --primary-dark: #3730a3;
+      --slate-50: #f8fafc;
+      --slate-100: #f1f5f9;
+      --slate-200: #e2e8f0;
+      --slate-300: #cbd5e1;
+      --slate-600: #475569;
+      --slate-700: #334155;
+      --slate-800: #1e293b;
+      --slate-900: #0f172a;
+      --emerald-600: #059669;
+      --emerald-50: #ecfdf5;
+      --emerald-100: #d1fae5;
+      --purple-600: #7c3aed;
+      --purple-50: #f5f3ff;
+      --amber-600: #d97706;
+      --amber-50: #fffbeb;
+      --blue-600: #2563eb;
+      --blue-50: #eff6ff;
+      --rose-600: #e11d48;
+      --rose-50: #fff1f2;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background-color: #f8fafc;
+      color: #1e293b;
+      line-height: 1.55;
+      padding: 32px 16px;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .container {
+      max-width: 1120px;
+      margin: 0 auto;
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 24px;
+      box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.05), 0 8px 10px -6px rgba(15, 23, 42, 0.02);
+      overflow: hidden;
+    }
+
+    /* Header Banner */
+    .header {
+      background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #0f172a 100%);
+      color: #ffffff;
+      padding: 44px 48px;
+      position: relative;
+    }
+
+    .header-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 24px;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+
+    .brand-logo {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .logo-emblem {
+      width: 44px;
+      height: 44px;
+      background: linear-gradient(135deg, #6366f1, #4338ca);
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 12px rgba(99, 102, 241, 0.35);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .brand-title {
+      font-size: 22px;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+    }
+
+    .brand-title span {
+      color: #818cf8;
+    }
+
+    .badge-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 14px;
+      border-radius: 9999px;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .badge-online {
+      background: rgba(16, 185, 129, 0.15);
+      color: #34d399;
+      border: 1px solid rgba(16, 185, 129, 0.3);
+    }
+
+    .pulse-dot {
+      width: 7px;
+      height: 7px;
+      background: #10b981;
+      border-radius: 50%;
+    }
+
+    .header-content h1 {
+      font-size: 30px;
+      font-weight: 800;
+      line-height: 1.25;
+      letter-spacing: -0.025em;
+      margin-bottom: 8px;
+    }
+
+    .header-content p {
+      color: #cbd5e1;
+      font-size: 14px;
+      max-width: 760px;
+    }
+
+    .header-meta {
+      display: flex;
+      gap: 24px;
+      margin-top: 24px;
+      padding-top: 20px;
+      border-top: 1px solid rgba(255, 255, 255, 0.12);
+      font-size: 12px;
+      color: #94a3b8;
+      flex-wrap: wrap;
+    }
+
+    .header-meta strong {
+      color: #f1f5f9;
+    }
+
+    /* Print & Actions Bar */
+    .actions-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 16px 48px;
+      background: #f8fafc;
+      border-bottom: 1px solid #e2e8f0;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .actions-bar .summary-stat {
+      font-size: 13px;
+      font-weight: 600;
+      color: #334155;
+    }
+
+    .btn-print {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: #4f46e5;
+      color: white;
+      padding: 9px 18px;
+      border-radius: 10px;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      border: none;
+      transition: background 0.2s;
+    }
+
+    .btn-print:hover {
+      background: #4338ca;
+    }
+
+    /* Content Area */
+    .content {
+      padding: 40px 48px;
+    }
+
+    /* Node Explainer Box */
+    .explainer-box {
+      background: #eff6ff;
+      border: 1px solid #bfdbfe;
+      border-radius: 16px;
+      padding: 24px 28px;
+      margin-bottom: 36px;
+    }
+
+    .explainer-box h2 {
+      font-size: 16px;
+      font-weight: 800;
+      color: #1e3a8a;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .explainer-box p {
+      font-size: 13px;
+      color: #1e40af;
+      line-height: 1.6;
+    }
+
+    /* Architecture Grid */
+    .arch-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 20px;
+      margin-bottom: 40px;
+    }
+
+    @media (max-width: 768px) {
+      .arch-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .arch-card {
+      padding: 24px;
+      border-radius: 18px;
+      border: 1px solid #e2e8f0;
+    }
+
+    .arch-card.owner-card {
+      background: #faf5ff;
+      border-color: #e9d5ff;
+    }
+
+    .arch-card.factory-card {
+      background: #f0fdf4;
+      border-color: #bbf7d0;
+    }
+
+    .arch-card h3 {
+      font-size: 15px;
+      font-weight: 800;
+      margin-bottom: 4px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .arch-card.owner-card h3 { color: #6b21a8; }
+    .arch-card.factory-card h3 { color: #166534; }
+
+    .arch-card p {
+      font-size: 12px;
+      color: #64748b;
+      margin-bottom: 14px;
+    }
+
+    .node-tag-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .node-tag {
+      font-size: 11px;
+      font-weight: 700;
+      padding: 4px 10px;
+      border-radius: 8px;
+    }
+
+    .node-tag.purple {
+      background: #f3e8ff;
+      color: #7e22ce;
+      border: 1px solid #d8b4fe;
+    }
+
+    .node-tag.green {
+      background: #dcfce7;
+      color: #15803d;
+      border: 1px solid #86efac;
+    }
+
+    /* Key Architectural Spotlight */
+    .spotlight-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 18px;
+      margin-bottom: 36px;
+    }
+
+    @media (max-width: 768px) {
+      .spotlight-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .spotlight-card {
+      border-radius: 18px;
+      padding: 24px;
+      border: 1px solid;
+      position: relative;
+    }
+
+    .spotlight-admin {
+      background: linear-gradient(145deg, #faf5ff 0%, #f3e8ff 100%);
+      border-color: #d8b4fe;
+    }
+
+    .spotlight-accounts-hr {
+      background: linear-gradient(145deg, #eff6ff 0%, #dbeafe 100%);
+      border-color: #bfdbfe;
+    }
+
+    .spotlight-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      padding: 4px 10px;
+      border-radius: 9999px;
+      margin-bottom: 12px;
+    }
+
+    .spotlight-admin .spotlight-badge {
+      background: #7c3aed;
+      color: white;
+    }
+
+    .spotlight-accounts-hr .spotlight-badge {
+      background: #2563eb;
+      color: white;
+    }
+
+    .spotlight-title {
+      font-size: 15px;
+      font-weight: 800;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .spotlight-admin .spotlight-title { color: #581c87; }
+    .spotlight-accounts-hr .spotlight-title { color: #1e3a8a; }
+
+    .spotlight-desc {
+      font-size: 12px;
+      line-height: 1.6;
+      margin-bottom: 14px;
+    }
+
+    .spotlight-admin .spotlight-desc { color: #6b21a8; }
+    .spotlight-accounts-hr .spotlight-desc { color: #1e40af; }
+
+    .spotlight-points {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      font-size: 12px;
+    }
+
+    .spotlight-points li {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      line-height: 1.45;
+    }
+
+    .spotlight-admin .spotlight-points li { color: #4c1d95; }
+    .spotlight-accounts-hr .spotlight-points li { color: #1e3a8a; }
+
+    /* Section Title */
+    .section-title {
+      font-size: 20px;
+      font-weight: 800;
+      color: #0f172a;
+      letter-spacing: -0.02em;
+      margin-bottom: 6px;
+    }
+
+    .section-subtitle {
+      font-size: 13px;
+      color: #64748b;
+      margin-bottom: 24px;
+    }
+
+    /* Master Table */
+    .table-container {
+      overflow-x: auto;
+      border: 1px solid #e2e8f0;
+      border-radius: 16px;
+      margin-bottom: 40px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+      font-size: 12px;
+    }
+
+    thead {
+      background: #f1f5f9;
+      border-bottom: 1px solid #cbd5e1;
+    }
+
+    th {
+      padding: 14px 16px;
+      font-weight: 800;
+      text-transform: uppercase;
+      font-size: 11px;
+      letter-spacing: 0.05em;
+      color: #475569;
+    }
+
+    td {
+      padding: 16px;
+      border-bottom: 1px solid #e2e8f0;
+      vertical-align: top;
+    }
+
+    tbody tr:last-child td {
+      border-bottom: none;
+    }
+
+    tbody tr:hover {
+      background: #f8fafc;
+    }
+
+    .node-chip {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      font-weight: 700;
+      background: #0f172a;
+      color: white;
+      padding: 4px 8px;
+      border-radius: 6px;
+      display: inline-block;
+      white-space: nowrap;
+    }
+
+    .dept-cell {
+      font-weight: 700;
+      color: #0f172a;
+      font-size: 13px;
+    }
+
+    .role-badge {
+      font-size: 11px;
+      font-weight: 700;
+      padding: 3px 8px;
+      border-radius: 6px;
+      display: inline-block;
+      margin-top: 4px;
+    }
+
+    .role-owner { background: #f5f3ff; color: #6b21a8; border: 1px solid #ddd6fe; }
+    .role-factory { background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0; }
+
+    .permitted-list, .restricted-list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+
+    .permitted-list li {
+      color: #1e293b;
+      margin-bottom: 4px;
+      display: flex;
+      align-items: flex-start;
+      gap: 6px;
+      line-height: 1.4;
+    }
+
+    .permitted-list li::before {
+      content: "✓";
+      color: #10b981;
+      font-weight: 800;
+    }
+
+    .restricted-list li {
+      color: #64748b;
+      margin-bottom: 4px;
+      display: flex;
+      align-items: flex-start;
+      gap: 6px;
+      line-height: 1.4;
+      font-size: 11px;
+    }
+
+    .restricted-list li::before {
+      content: "✕";
+      color: #ef4444;
+      font-weight: 800;
+    }
+
+    /* Workflow Stepper */
+    .workflow-card {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 18px;
+      padding: 28px;
+      margin-bottom: 36px;
+    }
+
+    .workflow-steps {
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 12px;
+      margin-top: 18px;
+    }
+
+    @media (max-width: 900px) {
+      .workflow-steps {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    .flow-step {
+      background: white;
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      padding: 14px;
+      position: relative;
+    }
+
+    .flow-step-num {
+      font-size: 10px;
+      font-weight: 800;
+      text-transform: uppercase;
+      color: #6366f1;
+      letter-spacing: 0.05em;
+      margin-bottom: 4px;
+    }
+
+    .flow-step-title {
+      font-size: 12px;
+      font-weight: 700;
+      color: #0f172a;
+      margin-bottom: 4px;
+    }
+
+    .flow-step-node {
+      font-size: 10px;
+      color: #64748b;
+    }
+
+    /* Floor Security Rules */
+    .rules-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+      margin-bottom: 36px;
+    }
+
+    @media (max-width: 768px) {
+      .rules-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .rule-box {
+      border: 1px solid #e2e8f0;
+      background: white;
+      border-radius: 14px;
+      padding: 18px;
+    }
+
+    .rule-box h4 {
+      font-size: 13px;
+      font-weight: 700;
+      color: #0f172a;
+      margin-bottom: 6px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .rule-box p {
+      font-size: 11px;
+      color: #64748b;
+      line-height: 1.5;
+    }
+
+    /* Footer */
+    .footer {
+      background: #f8fafc;
+      border-top: 1px solid #e2e8f0;
+      padding: 24px 48px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 12px;
+      color: #64748b;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .footer strong {
+      color: #1e293b;
+    }
+
+    @media print {
+      body {
+        background: white;
+        padding: 0;
+      }
+      .container {
+        border: none;
+        box-shadow: none;
+      }
+      .actions-bar {
+        display: none;
+      }
+      .explainer-box, .arch-card, .flow-step, .rule-box {
+        break-inside: avoid;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <!-- Header -->
+    <header class="header">
+      <div class="header-top">
+        <div class="brand-logo">
+          <div class="logo-emblem">
+            <svg viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg" width="22" height="22">
+              <path d="M18 4L29 10V26L18 32L7 26V10L18 4Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round" opacity="0.4" />
+              <path d="M18 8L25 12V24L18 28L11 24V12L18 8Z" fill="#818cf8" />
+              <path d="M12 15L18 19L24 15" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+              <path d="M12 21L18 25L24 21" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+              <line x1="18" y1="11" x2="18" y2="25" stroke="white" stroke-width="2" stroke-linecap="round" />
+            </svg>
+          </div>
+          <div>
+            <div class="brand-title">Garment<span>Flow</span> ERP</div>
+          </div>
+        </div>
+        <div class="badge-pill badge-online">
+          <span class="pulse-dot"></span>
+          12 Nodes System Architecture
+        </div>
+      </div>
+
+      <div class="header-content">
+        <h1>Factory Department & Workstation Permission Blueprint</h1>
+        <p>
+          Official role-based access control (RBAC), physical terminal allocation, and module segmentation plan for the 12-node factory deployment.
+        </p>
+      </div>
+
+      <div class="header-meta">
+        <div>Client / Factory: <strong>Mrityunjay Enterprises, Bhilwara</strong></div>
+        <div>Total Workstation Nodes: <strong>12 Terminals</strong></div>
+        <div>Departments: <strong>8 Operational Units</strong></div>
+        <div>Architecture: <strong>Two-Panel (Cloud Owner & Factory Station)</strong></div>
+      </div>
+    </header>
+
+    <!-- Actions Bar -->
+    <div class="actions-bar">
+      <div class="summary-stat">
+        Summary: <strong>7 Cloud Owner & Office Nodes</strong> (3 Admin + 2 Merch/PPC + 2 Accounts/HR) • <strong>5 Floor Factory Station Nodes</strong>
+      </div>
+      <button class="btn-print" onclick="window.print()">
+        🖨️ Print or Save as PDF
+      </button>
+    </div>
+
+    <!-- Main Content -->
+    <div class="content">
+
+      <!-- What is a Node Explainer -->
+      <div class="explainer-box">
+        <h2>💡 What Does a "Node" Mean in This Factory Setup?</h2>
+        <p>
+          In manufacturing ERP engineering, a <strong>"Node" is 1 physical computer, workstation, or terminal</strong> placed in a specific department. 
+          When 12 nodes are planned, it means the factory will install <strong>12 dedicated computers across the plant</strong>. 
+          Each computer is locked to its department's duties so workers only see the tools they need to perform their daily tasks, while company financials and profit margins remain strictly confidential.
+        </p>
+      </div>
+
+      <!-- Architecture Division -->
+      <div class="arch-grid">
+        <div class="arch-card owner-card">
+          <h3>👑 Cloud Owner & Office Portal (7 Nodes)</h3>
+          <p>For executive governance, buyer relationships, combined accounts & HR, and company administration.</p>
+          <div class="node-tag-list">
+            <span class="node-tag purple">Admin Node 10 (Full Super Admin)</span>
+            <span class="node-tag purple">Admin Node 11 (Full Super Admin)</span>
+            <span class="node-tag purple">Admin Node 12 (Full Super Admin)</span>
+            <span class="node-tag purple">Merchandising Node 01</span>
+            <span class="node-tag purple">Planning / PPC Node 02</span>
+            <span class="node-tag purple">Accounts & HR Node 08</span>
+            <span class="node-tag purple">Accounts & HR Node 09</span>
+          </div>
+        </div>
+
+        <div class="arch-card factory-card">
+          <h3>🏭 Floor Factory Station (5 Nodes)</h3>
+          <p>Autonomous shop-floor terminals for direct raw material receipt, cutting, stitching, and dispatch.</p>
+          <div class="node-tag-list">
+            <span class="node-tag green">Store Node 03</span>
+            <span class="node-tag green">Cutting Node 04</span>
+            <span class="node-tag green">Sewing Lines Node 05</span>
+            <span class="node-tag green">Finishing Node 06</span>
+            <span class="node-tag green">Packing & Dispatch Node 07</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Key Architecture Decisions Spotlight -->
+      <div class="spotlight-grid">
+        <!-- Decision 1: 3 Admin Nodes -->
+        <div class="spotlight-card spotlight-admin">
+          <div class="spotlight-badge">★ Architecture Decision 1</div>
+          <div class="spotlight-title">
+            <span>👑 3 Admin Nodes — 100% Identical Full Super Admin Rights</span>
+          </div>
+          <div class="spotlight-desc">
+            <strong>Nodes 10, 11 & 12</strong> (MD Cabin, Partner Cabin, GM Cabin) operate with <strong>identical, unrestricted Super Admin authority</strong> across both the Cloud Owner Portal and Floor Factory Stations.
+          </div>
+          <ul class="spotlight-points">
+            <li>
+              <span style="color: #7c3aed; font-weight: 800;">✓</span>
+              <span><strong>Zero Operational Friction:</strong> All 3 key leaders can approve high-value POs, sign off vendor releases, and inspect financials without waiting for an absent colleague's credentials.</span>
+            </li>
+            <li>
+              <span style="color: #7c3aed; font-weight: 800;">✓</span>
+              <span><strong>Consolidated Visibility:</strong> Instant access to real-time factory P&L, balance sheets, order margins, delivery health, and floor stoppage alerts.</span>
+            </li>
+            <li>
+              <span style="color: #7c3aed; font-weight: 800;">✓</span>
+              <span><strong>Complete Security Governance:</strong> Full authority to add/edit user accounts, assign workstation roles, and review tamper-proof audit trails.</span>
+            </li>
+          </ul>
+        </div>
+
+        <!-- Decision 2: Accounts & HR Unified -->
+        <div class="spotlight-card spotlight-accounts-hr">
+          <div class="spotlight-badge">★ Architecture Decision 2</div>
+          <div class="spotlight-title">
+            <span>💼👥 Accounts & HR — Unified into ONE Combined Department</span>
+          </div>
+          <div class="spotlight-desc">
+            <strong>Nodes 08 & 09</strong> are not artificially split into separate islands. Instead, they form a <strong>single integrated administrative section</strong> with identical shared permissions across both terminals.
+          </div>
+          <ul class="spotlight-points">
+            <li>
+              <span style="color: #2563eb; font-weight: 800;">✓</span>
+              <span><strong>Integrated Garment Economics:</strong> Garment manufacturing links raw fabric bills and buyer GST invoices directly with contractor wage bills and operator piece-work muster rolls.</span>
+            </li>
+            <li>
+              <span style="color: #2563eb; font-weight: 800;">✓</span>
+              <span><strong>Mutual Cross-Cover:</strong> During month-end payroll or urgent dispatch billing surges, both terminal operators can process GST tax invoices or salary slips simultaneously.</span>
+            </li>
+            <li>
+              <span style="color: #2563eb; font-weight: 800;">✓</span>
+              <span><strong>Zero Inter-Department Silos:</strong> Live synchronization between attendance biometric logs, overtime calculation, worker payouts, and company ledger debits.</span>
+            </li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Master Permissions Table -->
+      <div class="section-title">Master Allocation: 12 Nodes Across 8 Operational Units</div>
+      <div class="section-subtitle">Comprehensive breakdown of who operates each terminal, what they can access, and what is restricted.</div>
+
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th style="width: 80px;">Node #</th>
+              <th style="width: 170px;">Department</th>
+              <th style="width: 180px;">Assigned Role & Terminal</th>
+              <th>Permitted Modules & Actions</th>
+              <th>Strictly Restricted / Blocked</th>
+              <th style="width: 100px;">Access Level</th>
+            </tr>
+          </thead>
+          <tbody>
+
+            <!-- 1. Merchandising & Planning -->
+            <tr>
+              <td><span class="node-chip">NODE 01</span></td>
+              <td class="dept-cell">
+                Merchandising & Planning
+                <div style="font-size: 11px; color: #64748b; font-weight: normal;">Office Terminal 1</div>
+              </td>
+              <td>
+                <strong>Senior Merchandiser</strong>
+                <div><span class="role-badge role-owner">Owner Portal</span></div>
+              </td>
+              <td>
+                <ul class="permitted-list">
+                  <li>Buyer CRM & Inquiries</li>
+                  <li>Order Tech Packs & Style BOM</li>
+                  <li>Sampling Requests & Fit Approvals</li>
+                  <li>Fabric Sourcing & Costing Sheets</li>
+                </ul>
+              </td>
+              <td>
+                <ul class="restricted-list">
+                  <li>Factory operator wage muster</li>
+                  <li>Direct bank payment releases</li>
+                  <li>System user management</li>
+                </ul>
+              </td>
+              <td><strong style="color: #4f46e5;">Full (Orders)</strong></td>
+            </tr>
+
+            <tr>
+              <td><span class="node-chip">NODE 02</span></td>
+              <td class="dept-cell">
+                Merchandising & Planning
+                <div style="font-size: 11px; color: #64748b; font-weight: normal;">Office Terminal 2</div>
+              </td>
+              <td>
+                <strong>PPC / Production Planner</strong>
+                <div><span class="role-badge role-owner">Owner Portal</span></div>
+              </td>
+              <td>
+                <ul class="permitted-list">
+                  <li>Time & Action (T&A) Calendar</li>
+                  <li>Line Allocation & Capacity Planning</li>
+                  <li>Target Delivery Dates Tracking</li>
+                  <li>Production Bottleneck Analytics</li>
+                </ul>
+              </td>
+              <td>
+                <ul class="restricted-list">
+                  <li>Commercial buyer margins</li>
+                  <li>Staff salary & payroll files</li>
+                  <li>Vendor ledger payments</li>
+                </ul>
+              </td>
+              <td><strong style="color: #4f46e5;">Full (Planning)</strong></td>
+            </tr>
+
+            <!-- 2. Store -->
+            <tr>
+              <td><span class="node-chip">NODE 03</span></td>
+              <td class="dept-cell">
+                Store
+                <div style="font-size: 11px; color: #64748b; font-weight: normal;">Raw Material Godown</div>
+              </td>
+              <td>
+                <strong>Store In-charge</strong>
+                <div><span class="role-badge role-factory">Factory Station</span></div>
+              </td>
+              <td>
+                <ul class="permitted-list">
+                  <li>Fabric Roll Inward & Shade/Lot GRN</li>
+                  <li>Trims, Threads & Accessories Stock</li>
+                  <li>Material Issue to Cutting & Stitching</li>
+                  <li>Low Stock Reorder Alerts & Physical Audit</li>
+                </ul>
+              </td>
+              <td>
+                <ul class="restricted-list">
+                  <li>Buyer order sales value & margin</li>
+                  <li>Employee attendance & salaries</li>
+                  <li>Company tax invoices</li>
+                </ul>
+              </td>
+              <td><strong style="color: #059669;">Full (Inventory)</strong></td>
+            </tr>
+
+            <!-- 3. Cutting -->
+            <tr>
+              <td><span class="node-chip">NODE 04</span></td>
+              <td class="dept-cell">
+                Cutting
+                <div style="font-size: 11px; color: #64748b; font-weight: normal;">Cutting Master Desk</div>
+              </td>
+              <td>
+                <strong>Cutting Master / Supervisor</strong>
+                <div><span class="role-badge role-factory">Factory Station</span></div>
+              </td>
+              <td>
+                <ul class="permitted-list">
+                  <li>Fabric Requisition from Store</li>
+                  <li>Spreading Table Lay Schedule</li>
+                  <li>Marker Efficiency & Fabric Consumption Logs</li>
+                  <li>Cut Bundle Generation & Barcode Tickets</li>
+                </ul>
+              </td>
+              <td>
+                <ul class="restricted-list">
+                  <li>Commercial customer invoices</li>
+                  <li>Vendor ledger & purchase costs</li>
+                  <li>Accounts & HR settings</li>
+                </ul>
+              </td>
+              <td><strong style="color: #059669;">Full (Cutting)</strong></td>
+            </tr>
+
+            <!-- 4. Production Sewing -->
+            <tr>
+              <td><span class="node-chip">NODE 05</span></td>
+              <td class="dept-cell">
+                Production Sewing
+                <div style="font-size: 11px; color: #64748b; font-weight: normal;">Shop Floor Kiosk</div>
+              </td>
+              <td>
+                <strong>Sewing Floor Supervisor</strong>
+                <div><span class="role-badge role-factory">Factory Station</span></div>
+              </td>
+              <td>
+                <ul class="permitted-list">
+                  <li>Hourly Output Entry (Lines 1 to 6)</li>
+                  <li>Cut Bundle Ticket Scanning & Intake</li>
+                  <li>Operator Target vs Actual Tracker</li>
+                  <li>Inline Sewing Rejections & Alteration Logs</li>
+                  <li>Shift Handover to Finishing</li>
+                </ul>
+              </td>
+              <td>
+                <ul class="restricted-list">
+                  <li>Fabric purchase bills & pricing</li>
+                  <li>Customer balance sheets</li>
+                  <li>Executive MIS dashboards</li>
+                </ul>
+              </td>
+              <td><strong style="color: #059669;">Full (Stitching)</strong></td>
+            </tr>
+
+            <!-- 5. Finishing -->
+            <tr>
+              <td><span class="node-chip">NODE 06</span></td>
+              <td class="dept-cell">
+                Finishing
+                <div style="font-size: 11px; color: #64748b; font-weight: normal;">Washing & Ironing Area</div>
+              </td>
+              <td>
+                <strong>Finishing In-charge</strong>
+                <div><span class="role-badge role-factory">Factory Station</span></div>
+              </td>
+              <td>
+                <ul class="permitted-list">
+                  <li>Stitched Garment Receipt Verification</li>
+                  <li>Thread Trimming & Wash Counter</li>
+                  <li>Steam Pressing & Ironing Output Tally</li>
+                  <li>Stain Removal & Finishing Rework Logs</li>
+                  <li>Transfer to Packing Section</li>
+                </ul>
+              </td>
+              <td>
+                <ul class="restricted-list">
+                  <li>Buyer tech pack costing calculations</li>
+                  <li>HR payroll & contractor bills</li>
+                  <li>Raw material purchase orders</li>
+                </ul>
+              </td>
+              <td><strong style="color: #059669;">Full (Finishing)</strong></td>
+            </tr>
+
+            <!-- 6. Packing & Dispatch -->
+            <tr>
+              <td><span class="node-chip">NODE 07</span></td>
+              <td class="dept-cell">
+                Packing & Dispatch
+                <div style="font-size: 11px; color: #64748b; font-weight: normal;">Dispatch Dock Terminal</div>
+              </td>
+              <td>
+                <strong>Packing & Shipping Officer</strong>
+                <div><span class="role-badge role-factory">Factory Station</span></div>
+              </td>
+              <td>
+                <ul class="permitted-list">
+                  <li>Final QC Passed Garment Tally</li>
+                  <li>Polybag Packing & Cartonization List</li>
+                  <li>Carton Barcode & Shipping Label Printing</li>
+                  <li>Dispatch Delivery Challan & Gate Pass</li>
+                  <li>Vehicle & Container Loading Records</li>
+                </ul>
+              </td>
+              <td>
+                <ul class="restricted-list">
+                  <li>Cutting table markers</li>
+                  <li>Sewing operator hourly rates</li>
+                  <li>System configuration settings</li>
+                </ul>
+              </td>
+              <td><strong style="color: #059669;">Full (Packing)</strong></td>
+            </tr>
+
+            <!-- 7. Accounts & HR (Comes in One Combined Role Across 2 Nodes) -->
+            <tr>
+              <td><span class="node-chip">NODE 08</span></td>
+              <td class="dept-cell" rowspan="2">
+                Accounts & HR
+                <div style="font-size: 11px; color: #64748b; font-weight: normal;">Admin Office (2 Nodes)</div>
+                <div style="font-size: 10px; color: #4f46e5; font-weight: 700; margin-top: 4px;">Unified Combined Dept</div>
+              </td>
+              <td>
+                <strong>Accounts & HR Executive (Terminal 1)</strong>
+                <div><span class="role-badge role-owner">Owner Portal</span></div>
+              </td>
+              <td rowspan="2">
+                <div style="margin-bottom: 8px; font-weight: 700; color: #1e3a8a; font-size: 11px;">💼 Commercial Accounts & Finance:</div>
+                <ul class="permitted-list" style="margin-bottom: 10px;">
+                  <li>Buyer GST Tax Invoices & E-Way Bills</li>
+                  <li>Customer Receivables & Payment Ledger</li>
+                  <li>Vendor & Fabric Supplier Bills (AP/AR)</li>
+                  <li>Order Costing Sheet vs Actual Expense Audit</li>
+                </ul>
+                <div style="margin-bottom: 8px; font-weight: 700; color: #047857; font-size: 11px;">👥 HRMS, Attendance & Payroll:</div>
+                <ul class="permitted-list">
+                  <li>Worker Biometric Attendance Sync</li>
+                  <li>Operator Muster Roll & Overtime Records</li>
+                  <li>Contractor Wages & Monthly Payroll Slips</li>
+                  <li>Factory Compliance & Leave Management</li>
+                </ul>
+              </td>
+              <td rowspan="2">
+                <ul class="restricted-list">
+                  <li>CAD cutting markers & lay plans</li>
+                  <li>Sewing floor machine maintenance</li>
+                  <li>Altering buyer tech packs & sampling designs</li>
+                </ul>
+              </td>
+              <td rowspan="2"><strong style="color: #4f46e5;">Full (Accounts & HR Combined)</strong></td>
+            </tr>
+
+            <tr>
+              <td><span class="node-chip">NODE 09</span></td>
+              <td>
+                <strong>Accounts & HR Executive (Terminal 2)</strong>
+                <div><span class="role-badge role-owner">Owner Portal</span></div>
+              </td>
+            </tr>
+
+            <!-- 8. Admin (All 3 Nodes Have Identical Full Permissions) -->
+            <tr>
+              <td><span class="node-chip">NODE 10</span></td>
+              <td class="dept-cell" rowspan="3">
+                Admin
+                <div style="font-size: 11px; color: #64748b; font-weight: normal;">Executive Cabins (3 Nodes)</div>
+                <div style="font-size: 10px; color: #7c3aed; font-weight: 700; margin-top: 4px;">Identical Full Access</div>
+              </td>
+              <td>
+                <strong>Admin Terminal 1 (MD / Owner)</strong>
+                <div><span class="role-badge role-owner">Full Super Admin</span></div>
+              </td>
+              <td rowspan="3">
+                <ul class="permitted-list">
+                  <li><strong>Complete Unrestricted Access:</strong> Full control of both Cloud Owner Portal (/owner) & Factory Station (/factory)</li>
+                  <li>Multi-Unit Factory P&L, Balance Sheets, Cash Flow & Financial Overviews</li>
+                  <li>Real-Time Live Delivery Health & Production Floor Bottlenecks</li>
+                  <li>Financial, High-Value Purchase Orders & Production Approvals</li>
+                  <li>Quality Control Inspections & CAPA Corrective Action Sign-offs</li>
+                  <li>User Account Creation, Workstation Role Allocation, Security Audit Logs & System Backups</li>
+                </ul>
+              </td>
+              <td rowspan="3">
+                <em style="color: #10b981; font-weight: 600;">✓ No restrictions (All 3 Admin Nodes have Identical Full Super Admin Root Access)</em>
+              </td>
+              <td rowspan="3"><strong style="color: #7c3aed;">Full Super Admin (Identical across all 3)</strong></td>
+            </tr>
+
+            <tr>
+              <td><span class="node-chip">NODE 11</span></td>
+              <td>
+                <strong>Admin Terminal 2 (Director / Partner)</strong>
+                <div><span class="role-badge role-owner">Full Super Admin</span></div>
+              </td>
+            </tr>
+
+            <tr>
+              <td><span class="node-chip">NODE 12</span></td>
+              <td>
+                <strong>Admin Terminal 3 (General Manager / Ops Head)</strong>
+                <div><span class="role-badge role-owner">Full Super Admin</span></div>
+              </td>
+            </tr>
+
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Sequential Handover Flow -->
+      <div class="workflow-card">
+        <div class="section-title" style="font-size: 17px;">Sequential Factory Handover Pipeline</div>
+        <p style="font-size: 12px; color: #64748b;">How data flows seamlessly between physical nodes from raw fabric arrival to final export dispatch:</p>
+
+        <div class="workflow-steps">
+          <div class="flow-step">
+            <div class="flow-step-num">Step 1</div>
+            <div class="flow-step-title">Raw Store</div>
+            <div class="flow-step-node">Node 03 (GRN & Issuance)</div>
+          </div>
+          <div class="flow-step">
+            <div class="flow-step-num">Step 2</div>
+            <div class="flow-step-title">Cutting Floor</div>
+            <div class="flow-step-node">Node 04 (Lays & Bundles)</div>
+          </div>
+          <div class="flow-step">
+            <div class="flow-step-num">Step 3</div>
+            <div class="flow-step-title">Sewing Lines</div>
+            <div class="flow-step-node">Node 05 (Hourly Output)</div>
+          </div>
+          <div class="flow-step">
+            <div class="flow-step-num">Step 4</div>
+            <div class="flow-step-title">Finishing</div>
+            <div class="flow-step-node">Node 06 (Iron & Wash)</div>
+          </div>
+          <div class="flow-step">
+            <div class="flow-step-num">Step 5</div>
+            <div class="flow-step-title">Packing / Ship</div>
+            <div class="flow-step-node">Node 07 (Barcode & Gate Pass)</div>
+          </div>
+          <div class="flow-step">
+            <div class="flow-step-num">Step 6</div>
+            <div class="flow-step-title">Accounts & HR</div>
+            <div class="flow-step-node">Nodes 08 & 09 (Invoices & Payroll)</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Factory Floor Security Principles -->
+      <div class="section-title" style="font-size: 17px;">Core Security & Floor Segregation Principles</div>
+      <div class="section-subtitle">How GarmentFlow safeguards factory operations and financial data across the 12 nodes:</div>
+
+      <div class="rules-grid">
+        <div class="rule-box">
+          <h4>🔒 Commercial Privacy</h4>
+          <p>
+            Factory floor workers on Nodes 03 to 07 cannot view buyer order values, fabric purchasing costs, profit margins, or company bank balances.
+          </p>
+        </div>
+        <div class="rule-box">
+          <h4>⚡ One-Click Workstation Landing</h4>
+          <p>
+            When a workstation boots up on the floor (e.g., Cutting Node 04), it lands directly on its dedicated module with clean zero-confusion navigation.
+          </p>
+        </div>
+        <div class="rule-box">
+          <h4>🛡️ Strict Segregation of Duties</h4>
+          <p>
+            Store cannot alter buyer invoices; Accounts cannot change cutting marker parameters; Merchandising cannot approve payroll muster rolls.
+          </p>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Footer -->
+    <footer class="footer">
+      <div>
+        <strong>GarmentFlow ERP v2.4</strong> — Enterprise Garment Manufacturing Management Platform
+      </div>
+      <div>
+        Designed for <strong>Mrityunjay Enterprises, Bhilwara</strong> by <a href="https://crestadev.in" target="_blank" style="color: #4f46e5; text-decoration: none; font-weight: 700;">CrestaDev</a>
+      </div>
+    </footer>
+  </div>
+
+</body>
+</html>

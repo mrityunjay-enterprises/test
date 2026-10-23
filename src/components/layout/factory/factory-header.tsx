@@ -9,18 +9,36 @@ import {
   Search, Bell, ChevronDown, Sun, Moon, Menu, Plus,
   Building2, Shield, User, Settings, LogOut, CheckSquare,
   AlertTriangle, DollarSign, Factory, ExternalLink, Clock,
-  RefreshCw, CheckCircle2, ShieldAlert, Sparkles, HelpCircle
+  RefreshCw, CheckCircle2, ShieldAlert, Sparkles, HelpCircle,
+  Wifi, WifiOff
 } from "lucide-react";
 import { GarmentWorkflowModal } from "@/components/shared/garment-workflow-guide";
+import { NotificationDropdown } from "@/components/shared/notification-dropdown";
 
 export function FactoryHeader() {
   const { collapsed, setMobileOpen } = useFactorySidebar();
   const [darkMode, setDarkMode] = useState(false);
-  const [showNotifications, setShowNotifications] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showQuickModal, setShowQuickModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [showGuideModal, setShowGuideModal] = useState(false);
+
+  // Network Connectivity State (Factory Item 4)
+  const [isOnline, setIsOnline] = useState(true);
+
+  React.useEffect(() => {
+    if (typeof window !== "undefined") {
+      setIsOnline(navigator.onLine);
+      const handleOnline = () => setIsOnline(true);
+      const handleOffline = () => setIsOnline(false);
+      window.addEventListener("online", handleOnline);
+      window.addEventListener("offline", handleOffline);
+      return () => {
+        window.removeEventListener("online", handleOnline);
+        window.removeEventListener("offline", handleOffline);
+      };
+    }
+  }, []);
 
   const [currentUser, setCurrentUser] = useState({
     name: "Suresh Yadav",
@@ -31,27 +49,33 @@ export function FactoryHeader() {
   });
 
   React.useEffect(() => {
-    try {
-      const saved = localStorage.getItem("garmentflow_user");
-      if (saved) {
-        setCurrentUser(JSON.parse(saved));
+    // Switch off night mode system for now: enforce light mode
+    document.documentElement.classList.remove("dark");
+    const syncUser = () => {
+      try {
+        const saved = localStorage.getItem("garmentflow_user");
+        if (saved) {
+          setCurrentUser(JSON.parse(saved));
+        }
+      } catch (e) {
+        console.error(e);
       }
-    } catch (e) {
-      console.error(e);
-    }
+    };
+    syncUser();
+    window.addEventListener("storage", syncUser);
+    window.addEventListener("garmentflow_user_changed", syncUser);
+    return () => {
+      window.removeEventListener("storage", syncUser);
+      window.removeEventListener("garmentflow_user_changed", syncUser);
+    };
   }, []);
-
-  const isOwner = isOwnerRole(currentUser.role);
-
-  const toggleDarkMode = () => {
-    setDarkMode(!darkMode);
-    document.documentElement.classList.toggle("dark");
-  };
 
   const handleLogout = () => {
     localStorage.removeItem("garmentflow_user");
     window.location.href = getAppUrl("/");
   };
+
+  const isOwner = isOwnerRole(currentUser.role);
 
   return (
     <header
@@ -105,15 +129,7 @@ export function FactoryHeader() {
           <span className="sm:hidden">Log</span>
         </Link>
 
-        {/* How ERP Works Guide Button */}
-        <button
-          onClick={() => setShowGuideModal(true)}
-          className="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 dark:bg-emerald-900/30 hover:bg-emerald-500/20 text-xs font-bold transition-all border border-emerald-300/60 dark:border-emerald-700/60"
-          title="Understanding GarmentFlow ERP in Plain English"
-        >
-          <Sparkles size={14} className="text-emerald-500" />
-          <span>How ERP Works</span>
-        </button>
+
 
         {/* If Owner is viewing factory, offer return to Owner portal */}
         {isOwner && (
@@ -126,49 +142,20 @@ export function FactoryHeader() {
           </Link>
         )}
 
-        {/* Dark Mode */}
-        <button
-          onClick={toggleDarkMode}
-          className="p-2 rounded-xl text-slate-500 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-          aria-label="Toggle theme"
-        >
-          {darkMode ? <Sun size={17} /> : <Moon size={17} />}
-        </button>
-
-        {/* Shift Notifications */}
-        <div className="relative">
-          <button
-            onClick={() => setShowNotifications(!showNotifications)}
-            className="p-2 rounded-xl text-slate-500 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors relative"
-            aria-label="Notifications"
-          >
-            <Bell size={17} />
-            <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-emerald-500" />
-          </button>
-
-          {showNotifications && (
-            <div className="absolute right-0 top-full mt-2 w-80 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xl p-3 z-50 animate-scale-up">
-              <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800">
-                <span className="text-xs font-bold text-slate-900 dark:text-white">Shop Floor Alerts</span>
-                <span className="text-[10px] text-emerald-600 font-semibold">Active Shift</span>
-              </div>
-              <div className="mt-2 space-y-2 max-h-64 overflow-y-auto">
-                <div className="p-2 rounded-xl bg-emerald-50/50 dark:bg-emerald-950/20 text-xs">
-                  <p className="font-semibold text-slate-800 dark:text-slate-200">Line 4 Crossed Target (960 pcs)</p>
-                  <p className="text-[10px] text-slate-400 mt-0.5">Crew neck t-shirt production running ahead</p>
-                </div>
-                <div className="p-2 rounded-xl bg-amber-50/50 dark:bg-amber-950/20 text-xs">
-                  <p className="font-semibold text-slate-800 dark:text-slate-200">Line 3 Needle Guide Maintenance</p>
-                  <p className="text-[10px] text-slate-400 mt-0.5">Reported by QC at 11:15 AM</p>
-                </div>
-                <div className="p-2 rounded-xl bg-blue-50/50 dark:bg-blue-950/20 text-xs">
-                  <p className="font-semibold text-slate-800 dark:text-slate-200">Cutting Table 2 Auto-Spreading</p>
-                  <p className="text-[10px] text-slate-400 mt-0.5">32 Plies complete for Floral Maxi Dress</p>
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
+        {/* Network & Connectivity Status Badge (Factory Item 4) */}
+        {isOnline ? (
+          <div className="hidden lg:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 text-[11px] font-semibold" title="Factory floor live connected to central cloud server">
+            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+            <Wifi size={13} className="text-emerald-600" />
+            <span>Floor Online</span>
+          </div>
+        ) : (
+          <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-rose-50 text-rose-700 dark:bg-rose-950/50 dark:text-rose-300 border border-rose-300 dark:border-rose-700 text-xs font-bold animate-pulse" title="Working offline: entries cached locally">
+            <WifiOff size={14} className="text-rose-600" />
+            <span>Offline Mode (Local Cache)</span>
+          </div>
+        )}
+        <NotificationDropdown basePath="/factory" accentColor="emerald" />
 
         {/* User Profile Menu */}
         <div className="relative">
@@ -225,6 +212,45 @@ export function FactoryHeader() {
                   <Shield size={15} /> Switch to Owner Portal
                 </Link>
               )}
+
+              {/* Department Role Switcher */}
+              <div className="border-t border-slate-100 dark:border-slate-800 my-1 pt-1.5">
+                <p className="px-3 py-1 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                  Test Department Access:
+                </p>
+                <div className="space-y-0.5">
+                  {[
+                    { name: "Arun Kapoor", role: "Managing Director (MD)", dept: "Executive Management", initials: "AK" },
+                    { name: "Meera Joshi", role: "Merchandising Head", dept: "Merchandising Department", initials: "MJ" },
+                    { name: "Rajendra Singh", role: "Store Incharge", dept: "Store Department", initials: "RS" },
+                    { name: "Kavita Sharma", role: "Quality Manager", dept: "Quality Department", initials: "KS" },
+                    { name: "Ramesh Kumar", role: "Finishing Supervisor", dept: "Finishing Department", initials: "RK" },
+                    { name: "Amit Verma", role: "Packing & Dispatch Lead", dept: "Packing & Dispatch Department", initials: "AV" },
+                    { name: "Priyanka Tiwari", role: "Accounts & HR Executive", dept: "HR & Accounts Department", initials: "PT" },
+                    { name: "Suresh Yadav", role: "Floor Supervisor", dept: "Stitching Lines", initials: "SY" },
+                  ].map((u) => (
+                    <button
+                      key={u.role}
+                      onClick={() => {
+                        const userObj = { ...u, email: `${u.name.toLowerCase().replace(" ", ".")}@garmentflow.com` };
+                        localStorage.setItem("garmentflow_user", JSON.stringify(userObj));
+                        window.dispatchEvent(new Event("garmentflow_user_changed"));
+                        setShowUserMenu(false);
+                        window.location.href = "/factory/dashboard";
+                      }}
+                      className={cn(
+                        "w-full text-left px-3 py-1.5 rounded-lg text-[11px] flex items-center justify-between transition-colors",
+                        currentUser.role === u.role
+                          ? "bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 font-bold"
+                          : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
+                      )}
+                    >
+                      <span className="truncate">{u.role}</span>
+                      {currentUser.role === u.role && <span className="text-[10px] font-bold">✓</span>}
+                    </button>
+                  ))}
+                </div>
+              </div>
 
               <div className="border-t border-slate-100 dark:border-slate-800 my-1 pt-1">
                 <button

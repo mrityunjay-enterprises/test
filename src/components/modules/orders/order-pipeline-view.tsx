@@ -7,32 +7,34 @@ import {
   getStoredOrders,
   advanceOrderWorkflow,
   WORKFLOW_EVENT,
-  getNextStage
+  getNextStage,
 } from "@/lib/workflow-service";
-import { CheckCircle2, ChevronRight } from "lucide-react";
+import { OrderManufacturingWorkflowModal } from "./order-manufacturing-workflow-modal";
+import { CheckCircle2, ChevronRight, SlidersHorizontal, Sparkles, Plus } from "lucide-react";
 
 interface PipelineColumn {
   id: string;
   stage: string;
+  nodeTag: string;
   color: string;
-  icon?: any;
   matchStatuses: OrderStatus[];
 }
 
 const STAGES: PipelineColumn[] = [
-  { id: "draft", stage: "Enquiry & Costing", color: "bg-slate-500", matchStatuses: ["draft", "awaiting-approval"] },
-  { id: "confirmed", stage: "Order Confirmed", color: "bg-blue-500", matchStatuses: ["confirmed"] },
-  { id: "material", stage: "Material Sourcing", color: "bg-amber-500", matchStatuses: ["material-planning", "material-procurement"] },
-  { id: "cutting", stage: "Cutting Room", color: "bg-cyan-500", matchStatuses: ["ready-for-production", "in-cutting"] },
-  { id: "stitching", stage: "Stitching Floor", color: "bg-indigo-500", matchStatuses: ["in-stitching", "in-special-process"] },
-  { id: "quality", stage: "Finishing & Quality", color: "bg-purple-500", matchStatuses: ["in-finishing", "in-quality"] },
-  { id: "packing", stage: "Packing & FG", color: "bg-pink-500", matchStatuses: ["in-packing", "ready-for-dispatch"] },
-  { id: "completed", stage: "Dispatched & Delivered", color: "bg-emerald-500", matchStatuses: ["dispatched", "partially-dispatched", "completed"] },
+  { id: "draft", stage: "Enquiry & Approval", nodeTag: "Nodes 01-12", color: "bg-slate-500", matchStatuses: ["draft", "awaiting-approval"] },
+  { id: "confirmed", stage: "Confirmed Order", nodeTag: "Node 01", color: "bg-blue-500", matchStatuses: ["confirmed"] },
+  { id: "testing", stage: "Inward & FPT/GPT", nodeTag: "Nodes 03-03C", color: "bg-amber-500", matchStatuses: ["fabric-inward", "fpt-testing", "ppe-gpt", "material-planning", "material-procurement"] },
+  { id: "cutting", stage: "Size Set & Cutting", nodeTag: "Nodes 03D-04B", color: "bg-cyan-500", matchStatuses: ["size-set-approval", "ready-for-cutting", "in-cutting", "cut-reported", "ready-for-production"] },
+  { id: "stitching", stage: "Sewing & Endline", nodeTag: "Nodes 05-05B", color: "bg-indigo-500", matchStatuses: ["in-stitching", "endline-checking", "stitching-alteration", "in-special-process"] },
+  { id: "finishing", stage: "Finishing 6-Stage", nodeTag: "Nodes 06A-06F", color: "bg-purple-500", matchStatuses: ["finishing-trims", "finishing-thread-trimming", "finishing-press-1", "finishing-initial-check", "finishing-repair", "finishing-final-press", "finishing-final-check", "in-finishing", "in-quality"] },
+  { id: "packing", stage: "Packing & Staging", nodeTag: "Nodes 07-07B", color: "bg-pink-500", matchStatuses: ["in-packing", "ready-for-dispatch"] },
+  { id: "completed", stage: "Dispatched & Closed", nodeTag: "Nodes 07C-09", color: "bg-emerald-500", matchStatuses: ["dispatched", "partially-dispatched", "completed"] },
 ];
 
 export function OrderPipelineView({ basePath }: { basePath?: string }) {
   const [ordersList, setOrdersList] = useState<Order[]>([]);
   const [toastMsg, setToastMsg] = useState<string | null>(null);
+  const [selectedOrderModal, setSelectedOrderModal] = useState<Order | null>(null);
 
   const loadData = () => {
     setOrdersList(getStoredOrders());
@@ -49,7 +51,8 @@ export function OrderPipelineView({ basePath }: { basePath?: string }) {
     };
   }, []);
 
-  const handleAdvance = (orderId: string) => {
+  const handleAdvance = (e: React.MouseEvent, orderId: string) => {
+    e.stopPropagation();
     const { nextStatus, orderName } = advanceOrderWorkflow(orderId);
     if (nextStatus) {
       setToastMsg(`Order ${orderName} advanced to: ${nextStatus.replace(/-/g, " ").toUpperCase()}`);
@@ -72,11 +75,21 @@ export function OrderPipelineView({ basePath }: { basePath?: string }) {
       )}
 
       {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">Order Pipeline & Kanban View</h1>
-        <p className="text-sm text-slate-500 mt-1">
-          End-to-end synchronized workflow tracking garment manufacturing across all 8 production milestones
-        </p>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">
+            Order Manufacturing Pipeline
+          </h1>
+          <p className="text-sm text-slate-500 mt-1">
+            Complete synchronized tracking from Fabric Inward → FPT/GPT → Cutting → Stitching Endline → Finishing 6-Stage → Packing.
+          </p>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-slate-400 font-semibold">
+            Click any order card to open Manufacturing & Labor Payment Hub
+          </span>
+        </div>
       </div>
 
       {/* Kanban Grid */}
@@ -90,8 +103,13 @@ export function OrderPipelineView({ basePath }: { basePath?: string }) {
             >
               <div className="flex items-center justify-between mb-3 px-1">
                 <div className="flex items-center gap-2 min-w-0">
-                  <span className={cn("w-2.5 h-2.5 rounded-full flex-shrink-0", col.color)} />
-                  <h3 className="text-xs font-bold text-slate-800 dark:text-white truncate">{col.stage}</h3>
+                  <span className={cn("w-2.5 h-2.5 rounded-full flex-shrink-0 mt-0.5", col.color)} />
+                  <div className="min-w-0">
+                    <span className="text-[10px] font-mono font-bold text-indigo-600 dark:text-indigo-400 block leading-tight">
+                      {col.nodeTag}
+                    </span>
+                    <h3 className="text-xs font-bold text-slate-800 dark:text-white truncate">{col.stage}</h3>
+                  </div>
                 </div>
                 <span className="text-[11px] font-bold text-slate-500 bg-white dark:bg-slate-800 px-2 py-0.5 rounded-full border border-slate-200/60 dark:border-slate-700">
                   {items.length}
@@ -110,16 +128,21 @@ export function OrderPipelineView({ basePath }: { basePath?: string }) {
                     return (
                       <div
                         key={o.id}
-                        className="bg-white dark:bg-slate-800 rounded-2xl p-3 border border-slate-200/60 dark:border-slate-700/60 shadow-sm hover:shadow-md transition-all space-y-2"
+                        onClick={() => setSelectedOrderModal(o)}
+                        className="bg-white dark:bg-slate-800 rounded-2xl p-3 border border-slate-200/60 dark:border-slate-700/60 shadow-sm hover:shadow-md hover:border-indigo-400 dark:hover:border-indigo-600 transition-all space-y-2 cursor-pointer group"
                       >
                         <div className="flex items-center justify-between">
-                          <span className="text-xs font-bold text-indigo-600 dark:text-indigo-400">{o.orderNumber}</span>
+                          <span className="text-xs font-bold text-indigo-600 dark:text-indigo-400 group-hover:underline">
+                            {o.orderNumber}
+                          </span>
                           <span className="text-[10px] font-mono font-bold text-slate-500">
                             {o.currency} {o.unitPrice}
                           </span>
                         </div>
                         <div>
-                          <h4 className="text-xs font-bold text-slate-900 dark:text-white line-clamp-1">{o.styleName}</h4>
+                          <h4 className="text-xs font-bold text-slate-900 dark:text-white line-clamp-1">
+                            {o.styleName}
+                          </h4>
                           <p className="text-[11px] text-slate-500 font-medium truncate">{o.buyerName}</p>
                         </div>
 
@@ -127,15 +150,15 @@ export function OrderPipelineView({ basePath }: { basePath?: string }) {
                           <span>
                             Qty: <strong className="text-slate-700 dark:text-slate-300 font-bold">{o.totalQuantity.toLocaleString()}</strong>
                           </span>
-                          <span>
-                            Due: <strong className="text-slate-700 dark:text-slate-300 font-bold">{o.deliveryDate}</strong>
+                          <span className="font-semibold text-indigo-600 dark:text-indigo-400">
+                            Hub →
                           </span>
                         </div>
 
                         {nextInfo.nextStatus && (
                           <button
                             type="button"
-                            onClick={() => handleAdvance(o.id)}
+                            onClick={(e) => handleAdvance(e, o.id)}
                             className="w-full mt-2 py-1.5 px-2 rounded-xl bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-300 hover:bg-indigo-100 font-bold text-[10px] flex items-center justify-center gap-1 transition-colors"
                           >
                             <span>Advance Stage</span>
@@ -156,6 +179,20 @@ export function OrderPipelineView({ basePath }: { basePath?: string }) {
           );
         })}
       </div>
+
+      {/* Interactive Manufacturing & Labor Payment Hub Modal */}
+      {selectedOrderModal && (
+        <OrderManufacturingWorkflowModal
+          order={selectedOrderModal}
+          onClose={() => setSelectedOrderModal(null)}
+          onOrderUpdated={(updated) => {
+            setSelectedOrderModal(updated);
+            loadData();
+          }}
+        />
+      )}
     </div>
   );
 }
+
+export default OrderPipelineView;

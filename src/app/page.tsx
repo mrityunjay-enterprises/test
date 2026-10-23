@@ -3,22 +3,95 @@
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import { GarmentFlowLogo } from "@/components/ui/logo";
-import { getAppUrl } from "@/lib/utils";
 import { isOwnerRole } from "@/lib/permissions";
 import {
-  Eye, EyeOff, ArrowRight, Factory, BarChart3, Shield, Users, CreditCard, Package, Building2, Crown, Wrench
+  Eye,
+  EyeOff,
+  ArrowRight,
+  Lock,
+  Mail,
+  Crown,
+  Factory,
+  ChevronDown,
+  ChevronUp,
+  ShieldCheck,
 } from "lucide-react";
 
-const ownerDemoAccounts = [
+interface DemoAccount {
+  name: string;
+  role: string;
+  dept: string;
+  email: string;
+  badge: string;
+  initials: string;
+}
+
+const ownerAccount: DemoAccount = {
+  name: "Arun Kapoor",
+  role: "Managing Director (MD)",
+  dept: "Executive Management",
+  email: "arun.kapoor@garmentflow.com",
+  badge: "Owner / Full Access",
+  initials: "AK",
+};
+
+const factoryAccount: DemoAccount = {
+  name: "Suresh Yadav",
+  role: "Floor Supervisor",
+  dept: "Stitching Lines",
+  email: "suresh.y@garmentflow.com",
+  badge: "Production Floor",
+  initials: "SY",
+};
+
+const otherDemoAccounts: DemoAccount[] = [
   {
-    name: "Arun Kapoor",
-    role: "Managing Director (MD)",
-    dept: "Executive Management",
-    email: "arun.kapoor@garmentflow.com",
-    badge: "Owner / Full Access",
-    badgeColor: "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300",
-    icon: <Crown size={16} className="text-purple-600" />,
-    initials: "AK"
+    name: "Meera Joshi",
+    role: "Merchandising Head",
+    dept: "Merchandising Department",
+    email: "meera.j@garmentflow.com",
+    badge: "Merchandising",
+    initials: "MJ",
+  },
+  {
+    name: "Rajendra Singh",
+    role: "Store Incharge",
+    dept: "Store Department",
+    email: "rajendra.s@garmentflow.com",
+    badge: "Store & Inventory",
+    initials: "RS",
+  },
+  {
+    name: "Kavita Sharma",
+    role: "Quality Manager",
+    dept: "Quality Department",
+    email: "kavita.s@garmentflow.com",
+    badge: "Quality (QC)",
+    initials: "KS",
+  },
+  {
+    name: "Ramesh Kumar",
+    role: "Finishing Supervisor",
+    dept: "Finishing Department",
+    email: "ramesh.k@garmentflow.com",
+    badge: "Finishing Floor",
+    initials: "RK",
+  },
+  {
+    name: "Amit Verma",
+    role: "Packing & Dispatch Lead",
+    dept: "Packing & Dispatch Department",
+    email: "amit.v@garmentflow.com",
+    badge: "Packing & Dispatch",
+    initials: "AV",
+  },
+  {
+    name: "Priyanka Tiwari",
+    role: "Accounts & HR Executive",
+    dept: "HR & Accounts Department",
+    email: "priyanka.t@garmentflow.com",
+    badge: "HRMS & Accounts",
+    initials: "PT",
   },
   {
     name: "Vikram Singhania",
@@ -26,88 +99,32 @@ const ownerDemoAccounts = [
     dept: "Enterprise Administration",
     email: "vikram.s@garmentflow.com",
     badge: "Super Admin",
-    badgeColor: "bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300",
-    icon: <Building2 size={16} className="text-indigo-600" />,
-    initials: "VS"
-  }
+    initials: "VS",
+  },
 ];
 
-const factoryDemoAccounts = [
-  {
-    name: "Suresh Yadav",
-    role: "Floor Supervisor",
-    dept: "Stitching Lines",
-    email: "suresh.y@garmentflow.com",
-    badge: "Production Floor",
-    badgeColor: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300",
-    icon: <Users size={16} className="text-blue-600" />,
-    initials: "SY"
-  },
-  {
-    name: "Kavita Sharma",
-    role: "Quality Manager",
-    dept: "Quality Assurance",
-    email: "kavita.s@garmentflow.com",
-    badge: "QC & CAPA",
-    badgeColor: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300",
-    icon: <Shield size={16} className="text-emerald-600" />,
-    initials: "KS"
-  },
-  {
-    name: "Rajendra Singh",
-    role: "Store & Cutting Head",
-    dept: "Store / Cutting",
-    email: "rajendra.s@garmentflow.com",
-    badge: "Stores & Cutting",
-    badgeColor: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300",
-    icon: <Factory size={16} className="text-amber-600" />,
-    initials: "RS"
-  },
-  {
-    name: "Priyanka Tiwari",
-    role: "Finance Manager",
-    dept: "Accounts & Billing",
-    email: "priyanka.t@garmentflow.com",
-    badge: "Finance & Accounts",
-    badgeColor: "bg-cyan-100 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-300",
-    icon: <CreditCard size={16} className="text-cyan-600" />,
-    initials: "PT"
-  },
-  {
-    name: "Meera Joshi",
-    role: "Merchandising Head",
-    dept: "Merchandising & Planning",
-    email: "meera.j@garmentflow.com",
-    badge: "Merchandising",
-    badgeColor: "bg-pink-100 text-pink-700 dark:bg-pink-900/30 dark:text-pink-300",
-    icon: <Package size={16} className="text-pink-600" />,
-    initials: "MJ"
-  }
-];
-
-const allDemoAccounts = [...ownerDemoAccounts, ...factoryDemoAccounts];
+const allAccounts = [ownerAccount, factoryAccount, ...otherDemoAccounts];
 
 export default function LoginPage() {
   const router = useRouter();
-  const [showPassword, setShowPassword] = useState(false);
-  const [email, setEmail] = useState(ownerDemoAccounts[0].email);
+  const [email, setEmail] = useState(ownerAccount.email);
   const [password, setPassword] = useState("admin123");
+  const [showPassword, setShowPassword] = useState(false);
+  const [rememberMe, setRememberMe] = useState(true);
   const [loading, setLoading] = useState(false);
+  const [showOtherRoles, setShowOtherRoles] = useState(false);
+  const [feedback, setFeedback] = useState<string | null>(null);
 
-  const loginAs = (acc: typeof allDemoAccounts[0]) => {
+  const performLogin = (acc: DemoAccount) => {
     setLoading(true);
+    setFeedback(`Signing in as ${acc.name}...`);
+
     try {
-      localStorage.setItem("garmentflow_user", JSON.stringify({
-        name: acc.name,
-        role: acc.role,
-        dept: acc.dept,
-        email: acc.email,
-        badge: acc.badge,
-        initials: acc.initials
-      }));
+      localStorage.setItem("garmentflow_user", JSON.stringify(acc));
     } catch (err) {
       console.error(err);
     }
+
     setTimeout(() => {
       const isOwner = isOwnerRole(acc.role);
       const target = isOwner ? "/owner/dashboard" : "/factory/dashboard";
@@ -117,243 +134,281 @@ export default function LoginPage() {
         // fallback
       }
       window.location.href = target;
-    }, 300);
+    }, 200);
   };
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleFormSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
+    if (!email.trim()) return;
 
-    const matched = allDemoAccounts.find(a => a.email.toLowerCase() === email.toLowerCase()) || {
-      name: email.split("@")[0].replace(".", " ").replace(/\b\w/g, c => c.toUpperCase()),
-      role: email.includes("owner") || email.includes("admin") ? "Managing Director (MD)" : "Floor Supervisor",
-      dept: email.includes("owner") || email.includes("admin") ? "Executive Management" : "Garment Manufacturing",
-      email: email,
-      badge: email.includes("owner") || email.includes("admin") ? "Owner" : "User",
-      initials: email.substring(0, 2).toUpperCase()
+    const matched = allAccounts.find(
+      (a) => a.email.toLowerCase() === email.trim().toLowerCase()
+    ) || {
+      name: email
+        .split("@")[0]
+        .replace(".", " ")
+        .replace(/\b\w/g, (c) => c.toUpperCase()),
+      role:
+        email.toLowerCase().includes("owner") ||
+        email.toLowerCase().includes("admin") ||
+        email.toLowerCase().includes("arun") ||
+        email.toLowerCase().includes("vikram")
+          ? "Managing Director (MD)"
+          : "Floor Supervisor",
+      dept:
+        email.toLowerCase().includes("owner") ||
+        email.toLowerCase().includes("admin")
+          ? "Executive Management"
+          : "Garment Manufacturing",
+      email: email.trim(),
+      badge:
+        email.toLowerCase().includes("owner") ||
+        email.toLowerCase().includes("admin")
+          ? "Owner"
+          : "User",
+      initials: email.slice(0, 2).toUpperCase(),
     };
 
-    try {
-      localStorage.setItem("garmentflow_user", JSON.stringify(matched));
-    } catch (err) {
-      console.error(err);
-    }
-
-    setTimeout(() => {
-      const isOwner = isOwnerRole(matched.role);
-      const target = isOwner ? "/owner/dashboard" : "/factory/dashboard";
-      try {
-        router.push(target);
-      } catch {
-        // fallback
-      }
-      window.location.href = target;
-    }, 300);
+    performLogin(matched);
   };
 
   return (
-    <div className="min-h-screen flex">
-      {/* Left Side - Enterprise Branding */}
-      <div className="hidden lg:flex lg:w-[48%] bg-gradient-to-br from-slate-950 via-indigo-950 to-slate-900 relative overflow-hidden">
-        <div className="absolute inset-0 opacity-15">
-          <div className="absolute top-20 left-20 w-72 h-72 rounded-full bg-purple-500 blur-3xl" />
-          <div className="absolute bottom-20 right-20 w-96 h-96 rounded-full bg-emerald-500 blur-3xl" />
-        </div>
+    <div className="h-screen min-h-[560px] w-full flex flex-col justify-between bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 overflow-y-auto md:overflow-hidden relative selection:bg-indigo-500 selection:text-white px-4 py-3 sm:py-4">
+      {/* Subtle Background Accent */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute -top-32 left-1/2 -translate-x-1/2 w-[600px] h-[360px] bg-gradient-to-b from-indigo-500/10 via-purple-500/5 to-transparent blur-3xl rounded-full" />
+      </div>
 
-        <div className="relative z-10 flex flex-col justify-between p-12 w-full text-white">
-          <div>
-            <GarmentFlowLogo size="lg" variant="light" />
-            <p className="text-xs font-semibold text-indigo-200/90 mt-2 tracking-wide">
-              GarmentFlow by{" "}
-              <a
-                href="https://crestadev.in"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="underline hover:text-white transition-colors"
+      {/* Top minimal status bar */}
+      <div className="relative z-10 w-full max-w-sm mx-auto flex items-center justify-between text-[11px] text-slate-400">
+        <span>Mrityunjay Enterprises</span>
+        <div className="flex items-center gap-1.5 font-medium text-emerald-600 dark:text-emerald-400">
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+          <span>System Online</span>
+        </div>
+      </div>
+
+      {/* Main Login Card - Compact & Centered */}
+      <main className="relative z-10 flex items-center justify-center my-auto">
+        <div className="w-full max-w-sm">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-lg shadow-slate-200/40 dark:shadow-none p-6 sm:p-7 backdrop-blur-sm">
+            {/* Centered Brand & Header */}
+            <div className="flex flex-col items-center text-center mb-5">
+              <GarmentFlowLogo size="md" />
+              <h1 className="text-lg font-bold tracking-tight text-slate-900 dark:text-white mt-3">
+                Sign in to your account
+              </h1>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                GarmentFlow ERP & MIS Platform
+              </p>
+            </div>
+
+            {/* Login Form */}
+            <form onSubmit={handleFormSubmit} className="space-y-3">
+              {/* Email */}
+              <div>
+                <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-300 mb-1">
+                  Work Email
+                </label>
+                <div className="relative">
+                  <Mail
+                    size={15}
+                    className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+                  />
+                  <input
+                    type="email"
+                    required
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="name@garmentflow.com"
+                    className="w-full h-9 pl-9 pr-3 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50/60 dark:bg-slate-800/60 text-slate-900 dark:text-white text-xs font-medium placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+                  />
+                </div>
+              </div>
+
+              {/* Password */}
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="text-[11px] font-semibold text-slate-600 dark:text-slate-300">
+                    Password
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      alert("Demo password: admin123\nYou can also click the demo buttons below.")
+                    }
+                    className="text-[10px] font-medium text-indigo-600 dark:text-indigo-400 hover:underline"
+                  >
+                    Forgot?
+                  </button>
+                </div>
+                <div className="relative">
+                  <Lock
+                    size={15}
+                    className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+                  />
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    required
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="••••••••"
+                    className="w-full h-9 pl-9 pr-9 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50/60 dark:bg-slate-800/60 text-slate-900 dark:text-white text-xs font-medium placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors"
+                    aria-label={showPassword ? "Hide password" : "Show password"}
+                  >
+                    {showPassword ? <EyeOff size={14} /> : <Eye size={14} />}
+                  </button>
+                </div>
+              </div>
+
+              {/* Remember checkbox */}
+              <div className="flex items-center pt-0.5">
+                <label className="flex items-center gap-2 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={rememberMe}
+                    onChange={(e) => setRememberMe(e.target.checked)}
+                    className="w-3.5 h-3.5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                  />
+                  <span className="text-[11px] text-slate-500 dark:text-slate-400">
+                    Remember this device
+                  </span>
+                </label>
+              </div>
+
+              {/* Submit Button */}
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full h-9 rounded-lg bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white font-semibold text-xs transition-all flex items-center justify-center gap-1.5 shadow-sm shadow-indigo-500/25 disabled:opacity-70 disabled:cursor-not-allowed cursor-pointer"
               >
-                CrestaDev
-              </a>
-            </p>
-          </div>
+                {loading ? (
+                  <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                ) : (
+                  <>
+                    Sign In <ArrowRight size={14} />
+                  </>
+                )}
+              </button>
+            </form>
 
-          <div className="space-y-6 my-auto max-w-md">
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/10 backdrop-blur-sm border border-white/10 text-xs font-medium text-indigo-200">
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-              Two-Panel Architecture: Cloud Owner & Local Factory
+            {feedback && (
+              <p className="mt-2 text-center text-[11px] text-indigo-600 dark:text-indigo-400 animate-pulse font-medium">
+                {feedback}
+              </p>
+            )}
+
+            {/* Quick Demo Access Divider */}
+            <div className="relative my-3.5">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-slate-200/80 dark:border-slate-800" />
+              </div>
+              <div className="relative flex justify-center text-[10px] uppercase tracking-wider">
+                <span className="bg-white dark:bg-slate-900 px-2 text-slate-400 font-semibold">
+                  Or One-Click Demo
+                </span>
+              </div>
             </div>
-            <h1 className="text-3xl lg:text-4xl font-extrabold tracking-tight leading-tight">
-              Enterprise Garment Manufacturing ERP & MIS
-            </h1>
-            <p className="text-sm text-slate-300 leading-relaxed">
-              Separated architecture for business monitoring in the cloud and autonomous floor operations in factory units.
-            </p>
 
-            <div className="grid grid-cols-2 gap-3 pt-2">
-              <div className="p-3.5 rounded-2xl bg-purple-950/40 border border-purple-500/30 backdrop-blur-sm">
-                <div className="flex items-center gap-2 text-purple-300 font-bold text-xs mb-1">
-                  <Crown size={14} /> Owner Portal
+            {/* Compact Quick Demo Access */}
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => performLogin(ownerAccount)}
+                disabled={loading}
+                className="h-9 px-2.5 rounded-lg border border-purple-200 dark:border-purple-900/50 bg-purple-50/70 dark:bg-purple-950/30 hover:bg-purple-100/80 dark:hover:bg-purple-900/40 text-left transition-all flex items-center justify-between group"
+              >
+                <div className="flex items-center gap-1.5 min-w-0">
+                  <Crown size={13} className="text-purple-600 dark:text-purple-400 flex-shrink-0" />
+                  <span className="text-[11px] font-bold text-slate-800 dark:text-slate-200 truncate">
+                    Owner (MD)
+                  </span>
                 </div>
-                <p className="text-[11px] text-slate-300">
-                  Cloud-accessible, multi-unit P&L, receivables, company MIS & compliance.
-                </p>
-              </div>
-              <div className="p-3.5 rounded-2xl bg-emerald-950/40 border border-emerald-500/30 backdrop-blur-sm">
-                <div className="flex items-center gap-2 text-emerald-300 font-bold text-xs mb-1">
-                  <Factory size={14} /> Factory Station
+                <span className="text-[10px] font-semibold text-purple-600 dark:text-purple-400">
+                  →
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => performLogin(factoryAccount)}
+                disabled={loading}
+                className="h-9 px-2.5 rounded-lg border border-emerald-200 dark:border-emerald-900/50 bg-emerald-50/70 dark:bg-emerald-950/30 hover:bg-emerald-100/80 dark:hover:bg-emerald-900/40 text-left transition-all flex items-center justify-between group"
+              >
+                <div className="flex items-center gap-1.5 min-w-0">
+                  <Factory size={13} className="text-emerald-600 dark:text-emerald-400 flex-shrink-0" />
+                  <span className="text-[11px] font-bold text-slate-800 dark:text-slate-200 truncate">
+                    Factory Staff
+                  </span>
                 </div>
-                <p className="text-[11px] text-slate-300">
-                  Shop-floor workstation, lines 1-6 tracking, cutting, QC & department workstations.
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <div className="text-xs text-slate-400 flex items-center justify-between border-t border-slate-800/80 pt-4">
-            <span>GarmentFlow v2.4 (Enterprise Edition)</span>
-            <span className="font-semibold text-slate-300">Mrityunjay Enterprises, Bhilwara</span>
-          </div>
-        </div>
-      </div>
-
-      {/* Right Side - Login Panel & Persona Selector */}
-      <div className="flex-1 flex items-center justify-center p-6 sm:p-10 lg:p-12 bg-white dark:bg-slate-950 overflow-y-auto">
-        <div className="w-full max-w-lg py-6">
-          <div className="mb-6">
-            <div className="flex items-center gap-2 mb-2">
-              <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-indigo-50 text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-400 border border-indigo-200">
-                Single Sign-On Authentication
-              </span>
-            </div>
-            <h2 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">
-              Sign in to GarmentFlow
-            </h2>
-            <p className="text-xs text-slate-500 mt-1">
-              Select an account persona below to enter the full-featured GarmentFlow ERP Dashboard.
-            </p>
-          </div>
-
-          {/* Persona Switcher Section 1: Owner Accounts */}
-          <div className="mb-4 space-y-2">
-            <p className="text-[11px] font-extrabold text-purple-700 dark:text-purple-400 uppercase tracking-wider flex items-center gap-1.5">
-              <Crown size={13} /> Owner & Executive Management
-            </p>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-              {ownerDemoAccounts.map((acc, i) => (
-                <button
-                  key={i}
-                  type="button"
-                  onClick={() => loginAs(acc)}
-                  className={`p-3 rounded-2xl border text-left transition-all flex flex-col justify-between hover:scale-[1.01] active:scale-95 shadow-sm hover:shadow-md ${email === acc.email ? "bg-purple-50/90 dark:bg-purple-950/60 border-purple-600 ring-2 ring-purple-500/30" : "bg-slate-50 dark:bg-slate-900 border-slate-200/60 dark:border-slate-800 hover:border-purple-400"}`}
-                >
-                  <div className="flex items-center justify-between mb-1.5">
-                    <div className="p-1.5 rounded-lg bg-white dark:bg-slate-800 text-purple-600 shadow-sm">{acc.icon}</div>
-                    <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-md ${acc.badgeColor}`}>{acc.badge}</span>
-                  </div>
-                  <div>
-                    <p className="text-xs font-bold text-slate-900 dark:text-white truncate">{acc.name}</p>
-                    <p className="text-[11px] text-slate-500 truncate font-medium">{acc.role}</p>
-                    <span className="text-[10px] text-purple-600 dark:text-purple-400 font-semibold mt-1 block">→ Opens Owner Portal</span>
-                  </div>
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Persona Switcher Section 2: Factory Accounts */}
-          <div className="mb-6 space-y-2">
-            <p className="text-[11px] font-extrabold text-emerald-700 dark:text-emerald-400 uppercase tracking-wider flex items-center gap-1.5">
-              <Factory size={13} /> Factory & Department Heads
-            </p>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-              {factoryDemoAccounts.map((acc, i) => (
-                <button
-                  key={i}
-                  type="button"
-                  onClick={() => loginAs(acc)}
-                  className={`p-2.5 rounded-2xl border text-left transition-all flex flex-col justify-between hover:scale-[1.01] active:scale-95 shadow-sm hover:shadow-md ${email === acc.email ? "bg-emerald-50/90 dark:bg-emerald-950/60 border-emerald-600 ring-2 ring-emerald-500/30" : "bg-slate-50 dark:bg-slate-900 border-slate-200/60 dark:border-slate-800 hover:border-emerald-400"}`}
-                >
-                  <div className="flex items-center justify-between mb-1">
-                    <div className="p-1 rounded-lg bg-white dark:bg-slate-800 text-emerald-600 shadow-sm">{acc.icon}</div>
-                    <span className={`text-[9px] font-bold px-1 py-0.5 rounded-md ${acc.badgeColor}`}>{acc.badge}</span>
-                  </div>
-                  <div>
-                    <p className="text-xs font-bold text-slate-900 dark:text-white truncate">{acc.name}</p>
-                    <p className="text-[10px] text-slate-500 truncate font-medium">{acc.role}</p>
-                    <span className="text-[9px] text-emerald-600 dark:text-emerald-400 font-semibold mt-0.5 block">→ Opens Factory Station</span>
-                  </div>
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Credentials Form */}
-          <form onSubmit={handleLogin} className="space-y-4">
-            <div>
-              <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1.5">Email Address</label>
-              <input
-                type="email"
-                value={email}
-                onChange={e => setEmail(e.target.value)}
-                className="w-full h-11 px-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 text-xs font-medium"
-                required
-              />
+                <span className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400">
+                  →
+                </span>
+              </button>
             </div>
 
-            <div>
-              <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1.5">Password</label>
-              <div className="relative">
-                <input
-                  type={showPassword ? "text" : "password"}
-                  value={password}
-                  onChange={e => setPassword(e.target.value)}
-                  className="w-full h-11 px-4 pr-12 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 text-xs font-medium"
-                  required
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
-                >
-                  {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                </button>
-              </div>
-            </div>
+            {/* Other Demo Roles Collapsible */}
+            <div className="mt-2.5">
+              <button
+                type="button"
+                onClick={() => setShowOtherRoles(!showOtherRoles)}
+                className="w-full flex items-center justify-center gap-1 py-1 text-[10px] font-semibold text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
+              >
+                <span>Other roles (QC, Store, Finance, Merchandiser)</span>
+                {showOtherRoles ? <ChevronUp size={11} /> : <ChevronDown size={11} />}
+              </button>
 
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full h-11 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs transition-all flex items-center justify-center gap-2 shadow-sm shadow-indigo-500/25"
-            >
-              {loading ? (
-                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-              ) : (
-                <>Sign In to Application <ArrowRight size={16} /></>
+              {showOtherRoles && (
+                <div className="mt-1.5 pt-1.5 border-t border-slate-100 dark:border-slate-800 space-y-1">
+                  {otherDemoAccounts.map((acc, idx) => (
+                    <button
+                      key={idx}
+                      type="button"
+                      onClick={() => performLogin(acc)}
+                      disabled={loading}
+                      className="w-full flex items-center justify-between px-2 py-1 rounded-md text-left hover:bg-slate-100 dark:hover:bg-slate-800 text-[11px] transition-colors"
+                    >
+                      <span className="font-medium text-slate-700 dark:text-slate-300">
+                        {acc.name} <span className="text-[10px] text-slate-400">({acc.role})</span>
+                      </span>
+                      <span className="text-[10px] text-indigo-600 dark:text-indigo-400 font-semibold">
+                        Login →
+                      </span>
+                    </button>
+                  ))}
+                </div>
               )}
-            </button>
-          </form>
+            </div>
+          </div>
 
-          <div className="mt-8 pt-4 border-t border-slate-100 dark:border-slate-800 text-center text-xs font-semibold text-slate-500">
-            GarmentFlow by{" "}
-            <a
-              href="https://crestadev.in"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="font-bold text-indigo-600 dark:text-indigo-400 hover:underline"
-            >
-              CrestaDev
-            </a>{" "}
-            •{" "}
-            <a
-              href="https://crestadev.in"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="hover:underline font-mono text-[11px] text-slate-400"
-            >
-              crestadev.in
-            </a>
+          {/* Security note */}
+          <div className="mt-3 flex items-center justify-center gap-1.5 text-[10px] text-slate-400">
+            <ShieldCheck size={12} className="text-emerald-500" />
+            <span>Encrypted 256-bit Enterprise Access</span>
           </div>
         </div>
-      </div>
+      </main>
+
+      {/* Footer bar */}
+      <footer className="relative z-10 w-full max-w-sm mx-auto flex items-center justify-between text-[10px] text-slate-400 pt-1">
+        <span>GarmentFlow v2.4</span>
+        <div>
+          By{" "}
+          <a
+            href="https://crestadev.in"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-indigo-600 dark:text-indigo-400 hover:underline font-semibold"
+          >
+            CrestaDev
+          </a>
+        </div>
+      </footer>
     </div>
   );
 }

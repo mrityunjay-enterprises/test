@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, createContext, useContext, useEffect, useMemo } from "react";
+import React, { useState, createContext, useContext, useEffect, useMemo, useRef } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
@@ -27,9 +27,12 @@ import {
   ChevronRight,
   Search,
   X,
-  ArrowRightLeft
+  ArrowRightLeft,
+  FileText,
+  Bell
 } from "lucide-react";
 import { GarmentFlowLogo } from "@/components/ui/logo";
+import { isFactoryPathAllowed } from "@/lib/permissions";
 
 interface SidebarContextType {
   collapsed: boolean;
@@ -83,7 +86,7 @@ const factoryNavItems: NavItem[] = [
     label: "Floor Orders",
     href: "/factory/orders",
     icon: <ClipboardList size={18} />,
-    badge: "Floor",
+    badge: "Merchandising",
     badgeColor: "bg-blue-600/30 text-blue-200 border border-blue-500/40",
   },
   {
@@ -127,23 +130,22 @@ const factoryNavItems: NavItem[] = [
     icon: <GanttChart size={18} />,
   },
   {
-    label: "Invoices & Challans",
-    href: "/factory/invoices",
-    icon: <Receipt size={18} />,
-  },
-  {
-    label: "Contractor Payments",
-    href: "/factory/payments",
-    icon: <CreditCard size={18} />,
-  },
-  {
-    label: "Staff & Attendance",
+    label: "Staff & Attendance (HRMS)",
     href: "/factory/employees",
     icon: <UserCheck size={18} />,
     children: [
       { label: "Operators & Staff", href: "/factory/employees" },
       { label: "Shift Attendance", href: "/factory/attendance" },
       { label: "Worker Leave", href: "/factory/leave" },
+    ],
+  },
+  {
+    label: "Accounts & Invoices",
+    href: "/factory/invoices",
+    icon: <Receipt size={18} />,
+    children: [
+      { label: "Invoices & Billing", href: "/factory/invoices" },
+      { label: "Payment Receipts", href: "/factory/payments" },
     ],
   },
   {
@@ -170,20 +172,92 @@ export function FactorySidebar() {
   const [userDept, setUserDept] = useState("Stitching Lines");
 
   useEffect(() => {
-    try {
-      const saved = localStorage.getItem("garmentflow_user");
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (parsed.name) setUserName(parsed.name);
-        if (parsed.role) setUserRole(parsed.role);
-        if (parsed.dept) setUserDept(parsed.dept);
-      }
-    } catch { }
+    const syncUser = () => {
+      try {
+        const saved = localStorage.getItem("garmentflow_user");
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (parsed.name) setUserName(parsed.name);
+          if (parsed.role) setUserRole(parsed.role);
+          if (parsed.dept) setUserDept(parsed.dept);
+        }
+      } catch { }
+    };
+    syncUser();
+    window.addEventListener("storage", syncUser);
+    window.addEventListener("garmentflow_user_changed", syncUser);
+    return () => {
+      window.removeEventListener("storage", syncUser);
+      window.removeEventListener("garmentflow_user_changed", syncUser);
+    };
   }, []);
+
+  const asideRef = useRef<HTMLElement>(null);
+  const navRef = useRef<HTMLDivElement>(null);
+
+  // Prevent sidebar scroll from scrolling the main page
+  useEffect(() => {
+    const aside = asideRef.current;
+    const nav = navRef.current;
+    if (!aside || !nav) return;
+
+    const onWheel = (e: WheelEvent) => {
+      const { deltaY } = e;
+      if (!deltaY) return;
+
+      const isScrollingDown = deltaY > 0;
+      const isScrollingUp = deltaY < 0;
+      const atTop = nav.scrollTop <= 0;
+      const atBottom = nav.scrollTop + nav.clientHeight >= nav.scrollHeight - 1;
+
+      // Prevent window scroll chaining when reaching boundaries
+      if ((isScrollingUp && atTop) || (isScrollingDown && atBottom)) {
+        e.preventDefault();
+        return;
+      }
+
+      // If cursor is on sidebar header, search box, or footer, redirect scroll to the nav list
+      if (!nav.contains(e.target as Node)) {
+        nav.scrollTop += deltaY;
+        e.preventDefault();
+      }
+    };
+
+    aside.addEventListener("wheel", onWheel, { passive: false });
+    return () => aside.removeEventListener("wheel", onWheel);
+  }, []);
+
+  // Filter items by role permissions first
+  const permittedNavItems = useMemo(() => {
+    return factoryNavItems
+      .map((item) => {
+        if (item.children && item.children.length > 0) {
+          const allowedChildren = item.children.filter((child) =>
+            isFactoryPathAllowed(userRole, child.href)
+          );
+          if (allowedChildren.length > 0) {
+            return {
+              ...item,
+              children: allowedChildren,
+            };
+          }
+          if (isFactoryPathAllowed(userRole, item.href)) {
+            return { ...item, children: undefined };
+          }
+          return null;
+        }
+
+        if (isFactoryPathAllowed(userRole, item.href)) {
+          return item;
+        }
+        return null;
+      })
+      .filter(Boolean) as NavItem[];
+  }, [userRole]);
 
   // Auto-expand group if current path is in children
   useEffect(() => {
-    factoryNavItems.forEach((item) => {
+    permittedNavItems.forEach((item) => {
       if (item.children) {
         const isChildActive = item.children.some(
           (c) => cleanPath === c.href.replace(/\/$/, "") || cleanPath.startsWith(c.href + "/")
@@ -193,7 +267,7 @@ export function FactorySidebar() {
         }
       }
     });
-  }, [cleanPath]);
+  }, [cleanPath, permittedNavItems]);
 
   const toggleGroup = (label: string) => {
     setOpenGroups((prev) => ({
@@ -202,11 +276,11 @@ export function FactorySidebar() {
     }));
   };
 
-  // Filter items by search query
+  // Filter permitted items by search query
   const filteredNavItems = useMemo(() => {
-    if (!searchFilter.trim()) return factoryNavItems;
+    if (!searchFilter.trim()) return permittedNavItems;
     const q = searchFilter.toLowerCase();
-    return factoryNavItems
+    return permittedNavItems
       .map((item) => {
         const matchesParent = item.label.toLowerCase().includes(q);
         const matchingChildren = item.children?.filter((c) =>
@@ -221,7 +295,7 @@ export function FactorySidebar() {
         return null;
       })
       .filter(Boolean) as NavItem[];
-  }, [searchFilter]);
+  }, [permittedNavItems, searchFilter]);
 
   return (
     <>
@@ -235,8 +309,10 @@ export function FactorySidebar() {
 
       {/* Sidebar Container */}
       <aside
+        ref={asideRef}
+        style={{ overscrollBehavior: "contain" }}
         className={cn(
-          "fixed top-0 bottom-0 left-0 z-50 flex flex-col bg-slate-900 border-r border-slate-800 transition-all duration-300 shadow-xl select-none",
+          "fixed top-0 bottom-0 left-0 z-50 flex flex-col bg-slate-900 border-r border-slate-800 transition-all duration-300 shadow-xl select-none overscroll-contain",
           collapsed ? "w-[72px]" : "w-[264px]",
           mobileOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
         )}
@@ -244,17 +320,30 @@ export function FactorySidebar() {
         {/* Brand Header */}
         <div className="h-16 flex items-center justify-between px-4 border-b border-slate-800 bg-slate-950/40">
           <Link href="/factory/dashboard" className="flex items-center gap-3 overflow-hidden group">
-            <GarmentFlowLogo size="sm" variant="dark" />
+            {/* Precision Woven Emblem */}
+            <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-indigo-600 via-indigo-700 to-slate-900 flex items-center justify-center flex-shrink-0 shadow-md shadow-indigo-600/25 border border-indigo-400/20">
+              <svg viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-4 h-4 text-white">
+                <path d="M18 4L29 10V26L18 32L7 26V10L18 4Z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" className="opacity-40" />
+                <path d="M18 8L25 12V24L18 28L11 24V12L18 8Z" fill="url(#gf-logo-sidebar-factory)" />
+                <path d="M12 15L18 19L24 15" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                <path d="M12 21L18 25L24 21" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                <line x1="18" y1="11" x2="18" y2="25" stroke="white" strokeWidth="2" strokeLinecap="round" />
+                <defs>
+                  <linearGradient id="gf-logo-sidebar-factory" x1="11" y1="8" x2="25" y2="28" gradientUnits="userSpaceOnUse">
+                    <stop stopColor="#6366F1" />
+                    <stop offset="1" stopColor="#4338CA" />
+                  </linearGradient>
+                </defs>
+              </svg>
+            </div>
+
             {!collapsed && (
-              <div className="flex flex-col min-w-0">
-                <span className="text-sm font-bold tracking-tight text-white flex items-center gap-1.5">
-                  GarmentFlow
-                  <span className="text-[10px] font-semibold px-1.5 py-0.2 rounded bg-emerald-600/30 text-emerald-300 border border-emerald-500/30">
-                    FLOOR
-                  </span>
+              <div className="flex items-center gap-1.5 min-w-0">
+                <span className="text-base font-bold tracking-tight text-white leading-none">
+                  Garment<span className="text-indigo-400">Flow</span>
                 </span>
-                <span className="text-[11px] text-slate-400 font-medium truncate">
-                  Factory Station
+                <span className="text-[10px] font-extrabold px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 uppercase tracking-wider">
+                  FLOOR
                 </span>
               </div>
             )}
@@ -304,7 +393,11 @@ export function FactorySidebar() {
         )}
 
         {/* Navigation List */}
-        <div className="flex-1 overflow-y-auto px-2 py-3 space-y-0.5 scrollbar-thin">
+        <div
+          ref={navRef}
+          style={{ overscrollBehavior: "contain" }}
+          className="flex-1 overflow-y-auto px-2 py-3 space-y-0.5 scrollbar-thin overscroll-contain"
+        >
           {filteredNavItems.map((item) => {
             const hasChildren = item.children && item.children.length > 0;
             const isGroupOpen = openGroups[item.label] || Boolean(searchFilter.trim());
@@ -435,33 +528,8 @@ export function FactorySidebar() {
           })}
         </div>
 
-        {/* Sidebar Footer: Portal Switcher & Collapse Button */}
-        <div className="p-3 border-t border-slate-800 bg-slate-950/50 space-y-2">
-          {!collapsed ? (
-            <div className="flex items-center justify-between p-2 rounded-lg bg-slate-800/60 border border-slate-700/60">
-              <div className="min-w-0">
-                <p className="text-xs font-bold text-white truncate">{userName}</p>
-                <p className="text-[10px] text-slate-400 truncate">{userRole}</p>
-              </div>
-              <Link
-                href="/owner/dashboard"
-                className="text-[11px] font-semibold px-2 py-1 rounded bg-slate-700 hover:bg-blue-600 text-slate-200 hover:text-white transition-colors flex items-center gap-1 flex-shrink-0"
-                title="Switch to Owner Portal"
-              >
-                <ArrowRightLeft size={11} />
-                <span>Owner</span>
-              </Link>
-            </div>
-          ) : (
-            <Link
-              href="/owner/dashboard"
-              className="w-full py-1.5 flex items-center justify-center rounded-lg bg-slate-800 text-slate-300 hover:text-white hover:bg-blue-600 transition-colors"
-              title="Switch to Owner Portal"
-            >
-              <ArrowRightLeft size={14} />
-            </Link>
-          )}
-
+        {/* Sidebar Footer: Collapse Button */}
+        <div className="p-3 border-t border-slate-800 bg-slate-950/50">
           <button
             onClick={() => setCollapsed(!collapsed)}
             className="hidden lg:flex w-full items-center justify-center py-1.5 text-[11px] font-semibold text-slate-400 hover:text-white hover:bg-slate-800 rounded-md transition-colors"

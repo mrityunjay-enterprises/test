@@ -4,8 +4,10 @@ import React, { useState, useEffect, useRef } from "react";
 import { cn } from "@/lib/utils";
 import {
   Search, QrCode, ArrowRight, CheckCircle, CheckCircle2, Clock, Plus, X,
-  Filter, Eye, Package, ChevronRight
+  Filter, Eye, Package, ChevronRight, Printer
 } from "lucide-react";
+import { getStoredOrders } from "@/lib/workflow-service";
+import { orders as fallbackOrders } from "@/lib/demo-data";
 
 interface BundleHistoryEntry {
   operation: string;
@@ -17,6 +19,8 @@ interface BundleHistoryEntry {
 interface Bundle {
   id: string;
   order: string;
+  buyerName?: string;
+  buyerPO?: string;
   style: string;
   size: string;
   color: string;
@@ -32,35 +36,35 @@ interface Bundle {
 const STORAGE_KEY = "garmentflow_bundles";
 
 const initialBundles: Bundle[] = [
-  { id: "BDL-001", order: "ORD-2025-0001", style: "Men's Oxford Shirt", size: "M", color: "White", qty: 25, currentOp: "Collar Attach", line: "Line A", operator: "Sunita Kumari", status: "in-process", scannedAt: "10:42 AM", history: [
+  { id: "BDL-001", order: "ORD-2025-0001", buyerName: "Nordstrom", buyerPO: "NORD-PO-78234", style: "Men's Oxford Shirt", size: "M", color: "White", qty: 25, currentOp: "Collar Attach", line: "Line A", operator: "Sunita Kumari", status: "in-process", scannedAt: "10:42 AM", history: [
     { operation: "Cutting", operator: "Cutting Table 1", line: "—", time: "08:15 AM" },
     { operation: "Side Seam", operator: "Rani Devi", line: "Line A", time: "09:00 AM" },
     { operation: "Collar Attach", operator: "Sunita Kumari", line: "Line A", time: "10:42 AM" },
   ]},
-  { id: "BDL-002", order: "ORD-2025-0001", style: "Men's Oxford Shirt", size: "L", color: "White", qty: 25, currentOp: "Side Seam", line: "Line A", operator: "Rani Devi", status: "in-process", scannedAt: "10:38 AM", history: [
+  { id: "BDL-002", order: "ORD-2025-0001", buyerName: "Nordstrom", buyerPO: "NORD-PO-78234", style: "Men's Oxford Shirt", size: "L", color: "White", qty: 25, currentOp: "Side Seam", line: "Line A", operator: "Rani Devi", status: "in-process", scannedAt: "10:38 AM", history: [
     { operation: "Cutting", operator: "Cutting Table 1", line: "—", time: "08:20 AM" },
     { operation: "Side Seam", operator: "Rani Devi", line: "Line A", time: "10:38 AM" },
   ]},
-  { id: "BDL-003", order: "ORD-2025-0001", style: "Men's Oxford Shirt", size: "XL", color: "Blue", qty: 20, currentOp: "Button Attach", line: "Line A", operator: "Lata Kumari", status: "in-process", scannedAt: "10:25 AM", history: [
+  { id: "BDL-003", order: "ORD-2025-0001", buyerName: "Nordstrom", buyerPO: "NORD-PO-78234", style: "Men's Oxford Shirt", size: "XL", color: "Blue", qty: 20, currentOp: "Button Attach", line: "Line A", operator: "Lata Kumari", status: "in-process", scannedAt: "10:25 AM", history: [
     { operation: "Cutting", operator: "Cutting Table 2", line: "—", time: "08:00 AM" },
     { operation: "Sleeve Attach", operator: "Meena Sharma", line: "Line A", time: "09:15 AM" },
     { operation: "Side Seam", operator: "Rani Devi", line: "Line A", time: "09:50 AM" },
     { operation: "Button Attach", operator: "Lata Kumari", line: "Line A", time: "10:25 AM" },
   ]},
-  { id: "BDL-004", order: "ORD-2025-0002", style: "Women's Maxi Dress", size: "S", color: "Floral Navy", qty: 30, currentOp: "Bottom Hem", line: "Line B", operator: "Geeta Yadav", status: "in-process", scannedAt: "10:50 AM", history: [
+  { id: "BDL-004", order: "ORD-2025-0002", buyerName: "Marks & Spencer", buyerPO: "MS-PO-45678", style: "Women's Maxi Dress", size: "S", color: "Floral Navy", qty: 30, currentOp: "Bottom Hem", line: "Line B", operator: "Geeta Yadav", status: "in-process", scannedAt: "10:50 AM", history: [
     { operation: "Cutting", operator: "Cutting Table 1", line: "—", time: "09:00 AM" },
     { operation: "Bottom Hem", operator: "Geeta Yadav", line: "Line B", time: "10:50 AM" },
   ]},
-  { id: "BDL-005", order: "ORD-2025-0002", style: "Women's Maxi Dress", size: "M", color: "Floral Navy", qty: 30, currentOp: "Completed", line: "Line B", operator: "—", status: "completed", scannedAt: "09:55 AM", history: [
+  { id: "BDL-005", order: "ORD-2025-0002", buyerName: "Marks & Spencer", buyerPO: "MS-PO-45678", style: "Women's Maxi Dress", size: "M", color: "Floral Navy", qty: 30, currentOp: "Completed", line: "Line B", operator: "—", status: "completed", scannedAt: "09:55 AM", history: [
     { operation: "Cutting", operator: "Cutting Table 1", line: "—", time: "08:00 AM" },
     { operation: "Side Seam", operator: "Rekha Meena", line: "Line B", time: "08:45 AM" },
     { operation: "Completed", operator: "QC Pass", line: "Line B", time: "09:55 AM" },
   ]},
-  { id: "BDL-006", order: "ORD-2025-0004", style: "Men's Polo T-Shirt", size: "L", color: "Navy", qty: 40, currentOp: "Sleeve Attach", line: "Line C", operator: "Meena Sharma", status: "in-process", scannedAt: "10:30 AM", history: [
+  { id: "BDL-006", order: "ORD-2025-0004", buyerName: "Zara UK", buyerPO: "ZARA-PO-33210", style: "Men's Polo T-Shirt", size: "L", color: "Navy", qty: 40, currentOp: "Sleeve Attach", line: "Line C", operator: "Meena Sharma", status: "in-process", scannedAt: "10:30 AM", history: [
     { operation: "Cutting", operator: "Cutting Table 2", line: "—", time: "09:30 AM" },
     { operation: "Sleeve Attach", operator: "Meena Sharma", line: "Line C", time: "10:30 AM" },
   ]},
-  { id: "BDL-007", order: "ORD-2025-0004", style: "Men's Polo T-Shirt", size: "M", color: "White", qty: 40, currentOp: "Waiting", line: "Line C", operator: "—", status: "waiting", scannedAt: "—", history: [
+  { id: "BDL-007", order: "ORD-2025-0004", buyerName: "Zara UK", buyerPO: "ZARA-PO-33210", style: "Men's Polo T-Shirt", size: "M", color: "White", qty: 40, currentOp: "Waiting", line: "Line C", operator: "—", status: "waiting", scannedAt: "—", history: [
     { operation: "Cutting", operator: "Cutting Table 2", line: "—", time: "10:00 AM" },
   ]},
 ];
@@ -91,9 +95,23 @@ export default function BundlesPage() {
   const [newQty, setNewQty] = useState("25");
 
   useEffect(() => {
+    const orders = getStoredOrders();
+    const active = orders.length > 0 ? orders : fallbackOrders;
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
-      if (saved) { setBundles(JSON.parse(saved)); return; }
+      if (saved) {
+        const parsed: Bundle[] = JSON.parse(saved);
+        const enriched = parsed.map(b => {
+          const match = active.find(o => o.orderNumber === b.order || o.id === b.order);
+          return {
+            ...b,
+            buyerName: b.buyerName || match?.buyerName || "Nordstrom",
+            buyerPO: b.buyerPO || match?.buyerPO || "PO-NORD-78234",
+          };
+        });
+        setBundles(enriched);
+        return;
+      }
     } catch {}
     setBundles(initialBundles);
   }, []);
@@ -158,7 +176,16 @@ export default function BundlesPage() {
 
   const filtered = bundles.filter(b => {
     if (statusFilter !== "all" && b.status !== statusFilter) return false;
-    if (searchQuery && !b.id.toLowerCase().includes(searchQuery.toLowerCase()) && !b.order.toLowerCase().includes(searchQuery.toLowerCase()) && !b.operator.toLowerCase().includes(searchQuery.toLowerCase())) return false;
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase();
+      const matchId = b.id.toLowerCase().includes(q);
+      const matchOrder = b.order.toLowerCase().includes(q);
+      const matchStyle = b.style.toLowerCase().includes(q);
+      const matchBuyer = b.buyerName?.toLowerCase().includes(q);
+      const matchPO = b.buyerPO?.toLowerCase().includes(q);
+      const matchOp = b.operator?.toLowerCase().includes(q);
+      if (!matchId && !matchOrder && !matchStyle && !matchBuyer && !matchPO && !matchOp) return false;
+    }
     return true;
   });
 
@@ -204,7 +231,7 @@ export default function BundlesPage() {
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1 max-w-md">
           <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-          <input ref={searchRef} type="text" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder="Scan QR or search bundle ID..." className="w-full h-10 pl-10 pr-4 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/40" />
+          <input ref={searchRef} type="text" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder="Scan QR, search bundle ID, buyer, or PO..." className="w-full h-10 pl-10 pr-4 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/40" />
         </div>
         <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)} className="h-10 px-3 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/40">
           <option value="all">All Status</option>
@@ -220,7 +247,7 @@ export default function BundlesPage() {
           <thead>
             <tr className="border-b border-slate-100 dark:border-slate-800">
               <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Bundle ID</th>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Order / Style</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Order & Buyer</th>
               <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Size / Color</th>
               <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Qty</th>
               <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Current Op</th>
@@ -234,7 +261,19 @@ export default function BundlesPage() {
             {filtered.map(b => (
               <tr key={b.id} className="border-b border-slate-50 dark:border-slate-800/50 hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors">
                 <td className="px-4 py-3.5 flex items-center gap-2 text-sm font-semibold text-indigo-600"><QrCode size={14} />{b.id}</td>
-                <td className="px-4 py-3.5"><p className="text-sm font-medium text-slate-800 dark:text-white">{b.order}</p><p className="text-xs text-slate-500">{b.style}</p></td>
+                <td className="px-4 py-3.5">
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <span className="text-sm font-semibold text-slate-800 dark:text-white">{b.order}</span>
+                    {b.buyerName && (
+                      <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-indigo-50 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 border border-indigo-200/50 dark:border-indigo-800/50">
+                        {b.buyerName}
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    {b.style} {b.buyerPO ? `• PO: ${b.buyerPO}` : ""}
+                  </p>
+                </td>
                 <td className="px-4 py-3.5 text-sm text-slate-600">{b.size} / {b.color}</td>
                 <td className="px-4 py-3.5 text-sm font-bold text-slate-800 dark:text-white">{b.qty}</td>
                 <td className="px-4 py-3.5 text-sm font-medium text-slate-700">{b.currentOp}</td>
